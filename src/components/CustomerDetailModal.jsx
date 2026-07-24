@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { PRIMARY_STAGES, FINANCIAL_TAGS, FINANCIAL_TAG_COLORS } from '../constants';
 import { normalizeChecklist } from '../models';
-import { logActivity, formatLogDate } from '../utils';
+import { logActivity, formatLogDate, formatDate } from '../utils';
 import { supabase } from '../supabase';
 import HistoryEntryEditor from './HistoryEntryEditor';
 
@@ -50,8 +50,8 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
 
     if (!isEditing) {
         return (
-            <div className="bg-stone-50 p-3 rounded-xl">
-                <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-1 font-bold">{label}</p>
+            <div className="bg-stone-50 py-1.5 px-3 rounded-xl">
+                <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-0.5 font-bold">{label}</p>
                 <p className="text-sm font-semibold truncate text-stone-800">{value || '–'}</p>
             </div>
         );
@@ -59,32 +59,32 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
 
     if (adding) {
         return (
-            <div className="bg-stone-50 p-3 rounded-xl space-y-2">
+            <div className="bg-stone-50 py-1.5 px-3 rounded-xl space-y-1.5">
                 <p className="text-[9px] text-stone-400 uppercase tracking-wide font-bold">{label} — New</p>
                 <div className="flex gap-1">
                     <input autoFocus value={newVal} onChange={e => setNewVal(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAdd()}
                         placeholder={`New ${label}...`}
-                        className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300" />
-                    <button onClick={handleAdd} className="px-2 py-1 bg-amber-500 text-white rounded-lg text-xs font-bold">Add</button>
-                    <button onClick={() => setAdding(false)} className="px-2 py-1 bg-stone-200 text-stone-600 rounded-lg text-xs">✕</button>
+                        className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300" />
+                    <button onClick={handleAdd} className="px-2 py-0.5 bg-amber-500 text-white rounded-lg text-xs font-bold">Add</button>
+                    <button onClick={() => setAdding(false)} className="px-2 py-0.5 bg-stone-200 text-stone-600 rounded-lg text-xs">✕</button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-stone-50 p-3 rounded-xl">
-            <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-1 font-bold">{label}</p>
+        <div className="bg-stone-50 py-1.5 px-3 rounded-xl">
+            <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-0.5 font-bold">{label}</p>
             <div className="flex gap-1">
                 <select value={value || ''} onChange={e => onChange(field, e.target.value)}
-                    className="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300">
+                    className="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300">
                     <option value="">Select...</option>
                     {localOptions.map(o => <option key={o}>{o}</option>)}
                 </select>
                 <button onClick={() => setAdding(true)} title="Add new option"
-                    className="px-2 py-1 bg-stone-100 hover:bg-amber-50 hover:text-amber-600 text-stone-400 rounded-lg text-xs transition-colors">
-                    <Plus className="w-3.5 h-3.5" />
+                    className="px-1.5 py-0.5 bg-stone-100 hover:bg-amber-50 hover:text-amber-600 text-stone-400 rounded-lg text-xs transition-colors">
+                    <Plus className="w-3 h-3" />
                 </button>
             </div>
         </div>
@@ -92,35 +92,46 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
 }
 
 // ─── DetailItem / EditableDetailItem ──────────────────────────────────────────
-function DetailItem({ label, value, isMoney = false, isEnergy = false }) {
+function DetailItem({ label, value, isMoney = false, isEnergy = false, noTruncate = false, className = "", type = "text" }) {
+    let displayVal = value || '–';
+    if (type === 'date' && value) {
+        displayVal = formatDate(value);
+    }
     return (
-        <div className="bg-stone-50 p-3 rounded-xl">
-            <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-1 font-bold">{label}</p>
-            <p className={`text-sm font-semibold truncate ${isMoney ? 'text-emerald-600' : isEnergy ? 'text-amber-600' : 'text-stone-800'}`}>
-                {isMoney ? fmt(value) : (value || '–')}
+        <div className={`bg-stone-50 py-1.5 px-3 rounded-xl ${className}`}>
+            <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-0.5 font-bold">{label}</p>
+            <p className={`text-sm font-semibold ${noTruncate ? 'break-words whitespace-pre-wrap' : 'truncate'} ${isMoney ? 'text-emerald-600' : isEnergy ? 'text-amber-600' : 'text-stone-800'}`}>
+                {isMoney ? fmt(value) : displayVal}
             </p>
         </div>
     );
 }
 
-function EditableDetailItem({ label, field, value, onChange, type = 'text', isMoney = false, isEnergy = false, isEditing, options, category, meta }) {
+function EditableDetailItem({ label, field, value, onChange, type = 'text', isMoney = false, isEnergy = false, isEditing, options, category, meta, noTruncate = false, className = "" }) {
     // Metadata-driven dropdown with add-new
     if (options && category) {
-        return <MetaSelect label={label} field={field} value={value} onChange={onChange} category={category} options={options} isEditing={isEditing} />;
+        return (
+            <div className={className}>
+                <MetaSelect label={label} field={field} value={value} onChange={onChange} category={category} options={options} isEditing={isEditing} />
+            </div>
+        );
     }
-    if (!isEditing) return <DetailItem label={label} value={value} isMoney={isMoney} isEnergy={isEnergy} />;
+    if (!isEditing) return <DetailItem label={label} value={value} isMoney={isMoney} isEnergy={isEnergy} noTruncate={noTruncate} className={className} type={type} />;
     return (
-        <div className="bg-stone-50 p-3 rounded-xl">
-            <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-1 font-bold">{label}</p>
+        <div className={`bg-stone-50 py-1.5 px-3 rounded-xl ${className}`}>
+            <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-0.5 font-bold">{label}</p>
             {options ? (
                 <select value={value || ''} onChange={e => onChange(field, e.target.value)}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300">
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300">
                     <option value="">Select...</option>
                     {options.map(o => <option key={o}>{o}</option>)}
                 </select>
+            ) : type === 'textarea' ? (
+                <textarea value={value || ''} onChange={e => onChange(field, e.target.value)} rows={2}
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300 resize-none" />
             ) : (
                 <input type={type} value={value || ''} onChange={e => onChange(field, e.target.value)}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300" />
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300" />
             )}
         </div>
     );
@@ -206,7 +217,7 @@ function PaymentsEditor({ payments = [], onChange, isEditing }) {
 const SUBSIDY_STATUS_OPTIONS = ['Pending', 'Submitted', 'Rejected', 'Redeemed', 'Disbursed'];
 
 // ─── CustomerDetailModal ──────────────────────────────────────────────────────
-export default function CustomerDetailModal({ customer, onClose, onUpdate, onDelete, user, meta }) {
+export default function CustomerDetailModal({ customer, onClose, onUpdate, onDelete, user, meta = {} }) {
     const [activeTab, setActiveTab] = useState('overview');
     const [editingSection, setEditingSection] = useState(null);
     const [editData, setEditData] = useState({ ...customer });
@@ -218,6 +229,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
     const [localChecklist, setLocalChecklist] = useState(normalizeChecklist(customer.project_checklist));
     const [checklistDirty, setChecklistDirty] = useState(false);
+    const [newItemLabel, setNewItemLabel] = useState('');
+    const [editingRemarkId, setEditingRemarkId] = useState(null);
     const sections = [...new Set(localChecklist.map(item => item.section))];
 
     const ACTION_COLORS = {
@@ -235,19 +248,30 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
     useEffect(() => {
         setEditData({ ...customer });
-        setLocalChecklist(normalizeChecklist(customer.project_checklist));
+        setLocalChecklist(normalizeChecklist(customer.project_checklist, customer));
         fetchLogs();
     }, [customer.id]);
+
+    useEffect(() => {
+        setLocalChecklist(normalizeChecklist(customer.project_checklist, customer));
+        setEditData(prev => ({
+            ...prev,
+            project_checklist: customer.project_checklist,
+            payments: customer.payments,
+            follow_ups: customer.follow_ups,
+            subsidy_history: customer.subsidy_history
+        }));
+    }, [customer.project_checklist, customer.payments, customer.follow_ups, customer.subsidy_history]);
 
     // ── Auto-recalculate receivables whenever money fields change ──────────────
     // receivables = quoted_amount − discount − total_received  (floor 0)
     const recalcFinancials = (patch, current) => {
         const merged = { ...current, ...patch };
-        const quoted   = Number(merged.quoted_amount)  || 0;
-        const discount = Number(merged.discount)        || 0;
-        const received = Number(merged.total_received)  || 0;
+        const quoted = Number(merged.quoted_amount) || 0;
+        const discount = Number(merged.discount) || 0;
+        const received = Number(merged.total_received) || 0;
         const receivables = Math.max(0, quoted - discount - received);
-        return { ...patch, receivables };
+        return { ...patch, receivables, total_cost: quoted };
     };
 
     const handleChange = (field, val) => {
@@ -336,14 +360,14 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                             <span className="text-[9px] bg-white/10 text-stone-400 px-2 py-0.5 rounded font-bold uppercase tracking-widest">{customer.crn || 'NO-CRN'}</span>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
-                            {customer.location_link && (
-                                <a href={customer.location_link} target="_blank" rel="noreferrer"
+                            {customer.google_maps_location_link && (
+                                <a href={customer.google_maps_location_link} target="_blank" rel="noreferrer"
                                     className="flex items-center gap-1.5 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20">
                                     <MapPin size={10} /> VIEW MAPS
                                 </a>
                             )}
-                            {customer.google_docs && (
-                                <a href={customer.google_docs} target="_blank" rel="noreferrer"
+                            {customer.google_drive_docs_link && (
+                                <a href={customer.google_drive_docs_link} target="_blank" rel="noreferrer"
                                     className="flex items-center gap-1.5 bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">
                                     <FolderOpen size={10} /> GOOGLE DRIVE
                                 </a>
@@ -359,10 +383,11 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                 {/* Tabs */}
                 <div className="flex bg-stone-900 px-6 gap-6 border-t border-white/5 flex-shrink-0">
                     {[
-                        { id: 'overview',  label: 'Overview',        icon: LayoutDashboard },
-                        { id: 'finance',   label: 'Finance & Bank',  icon: IndianRupee },
-                        { id: 'checklist', label: 'Checklist',       icon: CheckSquare },
-                        { id: 'history',   label: 'Notes & History', icon: History },
+                        { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+                        // { id: 'project_and_technical', label: "Project & Technical", icon: Zap },
+                        { id: 'finance', label: 'Finance & Bank', icon: IndianRupee },
+                        { id: 'checklist', label: 'Checklist', icon: CheckSquare },
+                        { id: 'history', label: 'Notes & History', icon: History },
                     ].map(tab => (
                         <button key={tab.id} onClick={() => { setActiveTab(tab.id); setEditingSection(null); }}
                             className={`flex items-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id ? 'text-amber-400 border-amber-400' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
@@ -371,16 +396,15 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                     ))}
                 </div>
 
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-6 bg-[#FCFBFA]">
+                <div className="flex-1 overflow-y-auto p-4 bg-[#FCFBFA]">
 
                     {/* ── OVERVIEW ── */}
                     {activeTab === 'overview' && (
-                        <div className="space-y-6 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-4 animate-in fade-in duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {/* Stage select */}
-                                <div className="bg-white p-4 rounded-2xl border border-stone-100 shadow-sm">
-                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-2 block">Primary Stage</label>
+                                <div className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-1.5 block">Primary Stage</label>
                                     <select value={editData.stage} onChange={async (e) => {
                                         const newStage = e.target.value;
                                         const oldStage = editData.stage;
@@ -392,9 +416,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                         {PRIMARY_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                                     </select>
                                 </div>
-                                {/* Financial tag */}
-                                <div className="bg-white p-4 rounded-2xl border border-stone-100 shadow-sm">
-                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-2 block">Financial Tag</label>
+                                <div className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-1.5 block">Financial Tag</label>
                                     <div className="flex flex-wrap gap-1.5">
                                         {FINANCIAL_TAGS.map(tag => {
                                             const isActive = editData.financial_tag === tag.id;
@@ -412,93 +435,90 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                             </div>
 
                             {/* Customer Info */}
-{/* ── Paste these blocks inside CustomerDetailModal.jsx ─────────────────── */}
-
-            {/* Customer Info */}
-            <section>
-                <SectionHeader title="Customer Info" id="cus" icon={User} />
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                <EditableDetailItem label="Customer Name" field="customer_name" value={editData.customer_name} onChange={handleChange} isEditing={editingSection === 'cus'} />
-                                <EditableDetailItem label="Phone Number" field="phone_number" value={editData.phone_number} onChange={handleChange} isEditing={editingSection === 'cus'} />
-                                <EditableDetailItem label="Full Installation Address" field="full_installation_address" value={editData.full_installation_address} onChange={handleChange} isEditing={editingSection === 'cus'} />
-                                <EditableDetailItem label="AREA" field="area" value={editData.area} onChange={handleChange} isEditing={editingSection === 'cus'} />
-                                <EditableDetailItem label="Google Drive / Docs Link" field="google_drive_docs_link" value={editData.google_drive_docs_link} onChange={handleChange} isEditing={editingSection === 'cus'} />
-                                <EditableDetailItem label="Google Maps Location Link" field="google_maps_location_link" value={editData.google_maps_location_link} onChange={handleChange} isEditing={editingSection === 'cus'} />
-                </div>
-            </section>
-
-            {/* Project & Technical */}
-            <section>
-                <SectionHeader title="Project & Technical" id="pro" icon={Zap} />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <EditableDetailItem label="System Capacity (kWp)" field="system_capacity_kwp" value={editData.system_capacity_kwp} onChange={handleChange} isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="APPLICATION NO" field="application_no" value={editData.application_no} onChange={handleChange} isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="PANEL" field="panel" value={editData.panel} onChange={handleChange} options={meta['panel']} category="panel" isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="INVERTER" field="inverter" value={editData.inverter} onChange={handleChange} options={meta['inverter']} category="inverter" isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="DATE OF REGISTRATION" field="date_of_registration" value={editData.date_of_registration} onChange={handleChange} type="date" isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="METER PHASE" field="meter_phase" value={editData.meter_phase} onChange={handleChange} options={meta['meter_phase']} category="meter_phase" isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="FILE GIVEN TO CUSTOMER" field="file_given_to_customer" value={editData.file_given_to_customer} onChange={handleChange} options={meta['file_given_to_customer']} category="file_given_to_customer" isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="METER FILE SUBMISSION" field="meter_file_submission" value={editData.meter_file_submission} onChange={handleChange} options={meta['meter_file_submission']} category="meter_file_submission" isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="METER INSTALED" field="meter_instaled" value={editData.meter_instaled} onChange={handleChange} options={meta['meter_instaled']} category="meter_instaled" isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="PANEL AND INVERTER" field="panel_and_inverter" value={editData.panel_and_inverter} onChange={handleChange} options={meta['panel_and_inverter']} category="panel_and_inverter" isEditing={editingSection === 'pro'} />
-                                <EditableDetailItem label="FABRICATION AND WIRING" field="fabrication_and_wiring" value={editData.fabrication_and_wiring} onChange={handleChange} options={meta['fabrication_and_wiring']} category="fabrication_and_wiring" isEditing={editingSection === 'pro'} />
-                </div>
-            </section>
-
-            {/* Finance */}
-            {/* ── Also update DEFAULT_LEAD_FORM in models.jsx and PRIMARY_STAGES in constants.js ── */}
-            <section>
-                <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                <EditableDetailItem label="Quoted Project Amount" field="quoted_project_amount" value={editData.quoted_project_amount} onChange={handleChange} isEditing={editingSection === 'fin'} />
-                </div>
-                {/* PaymentsEditor automatically recalculates total_received & receivables */}
-                <PaymentsEditor payments={editData.payments || []} onChange={handlePaymentsChange} isEditing={editingSection === 'fin'} />
-            </section>
-
-            <section>
-                <SectionHeader title="Bank Information" id="bnk" icon={Building2} />
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                <EditableDetailItem label="Account Holder Name" field="account_holder_name" value={editData.account_holder_name} onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                                <EditableDetailItem label="Bank Name" field="bank_name" value={editData.bank_name} onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                                <EditableDetailItem label="Account Number" field="account_number" value={editData.account_number} onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                                <EditableDetailItem label="Loan Application Number" field="loan_application_number" value={editData.loan_application_number} onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                                <EditableDetailItem label="Bank Branch & IFSC" field="bank_branch_ifsc" value={editData.bank_branch_ifsc} onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                </div>
-            </section>
+                            <section>
+                                <SectionHeader title="Customer Info" id="cus" icon={User} />
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <EditableDetailItem label="Customer Name" field="customer_name" value={editData.customer_name} onChange={handleChange} isEditing={editingSection === 'cus'} />
+                                    <EditableDetailItem label="Phone Number" field="phone_number" value={editData.phone_number} onChange={handleChange} isEditing={editingSection === 'cus'} />
+                                    <EditableDetailItem label="AREA" field="area" value={editData.area} onChange={handleChange} isEditing={editingSection === 'cus'} />
+                                    <EditableDetailItem label="Full Installation Address" field="full_installation_address" value={editData.full_installation_address} onChange={handleChange} isEditing={editingSection === 'cus'} noTruncate type="textarea" className="col-span-2 md:col-span-3" />
+                                    <EditableDetailItem label="Google Drive / Docs Link" field="google_drive_docs_link" value={editData.google_drive_docs_link} onChange={handleChange} isEditing={editingSection === 'cus'} />
+                                    <EditableDetailItem label="Google Maps Location Link" field="google_maps_location_link" value={editData.google_maps_location_link} onChange={handleChange} isEditing={editingSection === 'cus'} />
+                                </div>
+                                <div className="space-y-6 animate-in fade-in duration-300">
+                                    <section>
+                                        <SectionHeader title="Project & Technical" id="pro" icon={Zap} />
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            <EditableDetailItem label="System Capacity (kWp)" field="system_capacity_kwp" value={editData.system_capacity_kwp} onChange={handleChange} type="number" isEnergy isEditing={editingSection === 'pro'} />
+                                            <EditableDetailItem label="APPLICATION NO" field="application_no" value={editData.application_no} onChange={handleChange} isEditing={editingSection === 'pro'} />
+                                            <EditableDetailItem label="PANEL" field="panel" value={editData.panel} onChange={handleChange} options={meta['panel']} category="panel" isEditing={editingSection === 'pro'} />
+                                            <EditableDetailItem label="INVERTER" field="inverter" value={editData.inverter} onChange={handleChange} options={meta['inverter']} category="inverter" isEditing={editingSection === 'pro'} />
+                                            <EditableDetailItem label="DATE OF REGISTRATION" field="date_of_registration" value={editData.date_of_registration} onChange={handleChange} type="date" isEditing={editingSection === 'pro'} />
+                                            <EditableDetailItem label="METER PHASE" field="meter_phase" value={editData.meter_phase} onChange={handleChange} options={meta['meter_phase']} category="meter_phase" isEditing={editingSection === 'pro'} />
+                                            <EditableDetailItem label="Consumer Number" field="consumer_number" value={editData.consumer_number} onChange={handleChange} isEditing={editingSection === 'pro'} />
+                                        </div>
+                                    </section>
+                                </div>
+                                {/* <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <EditableDetailItem label="Quoted Amt" field="quoted_amount" value={editData.quoted_amount} onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
+                                    <EditableDetailItem label="Quoted Amount with Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Payment Reciept" field="payment_reciept" value={editData.payment_reciept} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Payment Notes" field="payment_notes" value={editData.payment_notes} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Project Type" field="project_type" value={editData.project_type} onChange={handleChange} options={meta?.['project_type'] || []} category="project_type" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Payment Type" field="payment_type" value={editData.payment_type} onChange={handleChange} options={meta?.['payment_type'] || []} category="payment_type" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Last Transaction Id" field="last_transaction_id" value={editData.last_transaction_id} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Subsidy Claim" field="subsidy_claim" value={editData.subsidy_claim} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Subsidy Received" field="subsidy_received" value={editData.subsidy_received} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
+                                </div> */}
+                            </section>
 
 
+                        </div>
 
-                                        {/* Project & Technical */}
-                                        <section>
-                                            <SectionHeader title="Project & Technical" id="pro" icon={Zap} />
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                                <EditableDetailItem label="Capacity (kWp)"  field="capacity_kwp"   value={editData.capacity_kwp}   onChange={handleChange} isEditing={editingSection === 'pro'} isEnergy />
-                                                <EditableDetailItem label="Type"            field="project_type"   value={editData.project_type}   onChange={handleChange} options={meta['project_type']}  category="project_type"  isEditing={editingSection === 'pro'} />
-                                                <EditableDetailItem label="Vendor"          field="vendor"         value={editData.vendor}         onChange={handleChange} options={meta['vendor']}         category="vendor"         isEditing={editingSection === 'pro'} />
-                                                <EditableDetailItem label="Meter Cat"       field="meter_category" value={editData.meter_category} onChange={handleChange} options={meta['meter_category']}category="meter_category" isEditing={editingSection === 'pro'} />
-                                                <EditableDetailItem label="EB Number"       field="eb_number"      value={editData.eb_number}      onChange={handleChange} isEditing={editingSection === 'pro'} />
-                                                <EditableDetailItem label="DTR Code"        field="dtr_code"       value={editData.dtr_code}       onChange={handleChange} isEditing={editingSection === 'pro'} />
-                                                <EditableDetailItem label="Sanctioned Load" field="sanctioned_load"value={editData.sanctioned_load}onChange={handleChange} isEditing={editingSection === 'pro'} />
-                                                <EditableDetailItem label="DISCOM Div"      field="discom_division"value={editData.discom_division}onChange={handleChange} options={meta['discom_division']} category="discom_division" isEditing={editingSection === 'pro'} />
-                                            </div>
-                                        </section>
+                    )}
 
-                                        {/* Links */}
-                                        <section>
-                                            <SectionHeader title="Application Links" id="links" icon={FolderOpen} />
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <EditableDetailItem label="Google Docs Link" field="google_docs"   value={editData.google_docs}   onChange={handleChange} isEditing={editingSection === 'links'} />
-                                                <EditableDetailItem label="Location Link"    field="location_link" value={editData.location_link}  onChange={handleChange} isEditing={editingSection === 'links'} />
-                                            </div>
-                                        </section>
-                                    </div>
-                                )}
 
-                                {/* ── FINANCE & BANK ── */}
-                                {activeTab === 'finance' && (
-                                    <div className="space-y-6 animate-in fade-in duration-300">
-                                        <section>
+                    {/* Project & Technical */}
+                    {/* {activeTab === 'project_and_technical' && (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                            <section>
+                                <SectionHeader title="Project & Technical" id="pro" icon={Zap} />
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <EditableDetailItem label="System Capacity (kWp)" field="system_capacity_kwp" value={editData.system_capacity_kwp} onChange={handleChange} type="number" isEnergy isEditing={editingSection === 'pro'} />
+                                    <EditableDetailItem label="APPLICATION NO" field="application_no" value={editData.application_no} onChange={handleChange} isEditing={editingSection === 'pro'} />
+                                    <EditableDetailItem label="PANEL" field="panel" value={editData.panel} onChange={handleChange} options={meta['panel']} category="panel" isEditing={editingSection === 'pro'} />
+                                    <EditableDetailItem label="INVERTER" field="inverter" value={editData.inverter} onChange={handleChange} options={meta['inverter']} category="inverter" isEditing={editingSection === 'pro'} />
+                                    <EditableDetailItem label="DATE OF REGISTRATION" field="date_of_registration" value={editData.date_of_registration} onChange={handleChange} type="date" isEditing={editingSection === 'pro'} />
+                                    <EditableDetailItem label="METER PHASE" field="meter_phase" value={editData.meter_phase} onChange={handleChange} options={meta['meter_phase']} category="meter_phase" isEditing={editingSection === 'pro'} />
+                                    <EditableDetailItem label="Consumer Number" field="consumer_number" value={editData.consumer_number} onChange={handleChange} isEditing={editingSection === 'pro'} />
+                                </div>
+                            </section>
+                        </div>
+                    )} */}
+
+
+
+                    {/* ── FINANCE & BANK ── */}
+                    {activeTab === 'finance' && (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                            <section>
+                                <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <EditableDetailItem label="Quoted Amt" field="quoted_amount" value={editData.quoted_amount} onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
+                                    <EditableDetailItem label="Quoted Amount with Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Payment Reciept" field="payment_reciept" value={editData.payment_reciept} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Payment Notes" field="payment_notes" value={editData.payment_notes} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Project Type" field="project_type" value={editData.project_type} onChange={handleChange} options={meta?.['project_type'] || []} category="project_type" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Payment Type" field="payment_type" value={editData.payment_type} onChange={handleChange} options={meta?.['payment_type'] || []} category="payment_type" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Last Transaction Id" field="last_transaction_id" value={editData.last_transaction_id} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Subsidy Claim" field="subsidy_claim" value={editData.subsidy_claim} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Subsidy Received" field="subsidy_received" value={editData.subsidy_received} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
+                                </div>
+                            </section>
+                            {/* <section>
                                             <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
                                             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
                                                 <EditableDetailItem label="Quoted Amt"  field="quoted_amount"  value={editData.quoted_amount}  onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
@@ -512,10 +532,10 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                 onChange={handlePaymentsChange}
                                                 isEditing={editingSection === 'fin'}
                                             />
-                                        </section>
+                                        </section> */}
 
-                                        {/* Subsidy — uses generic HistoryEntryEditor */}
-                                        <section>
+                            {/* Subsidy — uses generic HistoryEntryEditor */}
+                            {/* <section>
                                             <SectionHeader title="Subsidy Status History" id="sub" icon={Banknote} />
                                             <HistoryEntryEditor
                                                 entries={editData.subsidy_history || []}
@@ -525,59 +545,132 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                 title="Subsidy Entry"
                                                 emptyText="No subsidy history recorded"
                                             />
-                                        </section>
+                                        </section> */}
+                        </div>
+                    )}
 
-                                        {/* Bank Info */}
-                                        <section>
-                                            <SectionHeader title="Bank Information" id="bnk" icon={Building2} />
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                                <EditableDetailItem label="Account Name"  field="customer_account_name"  value={editData.customer_account_name}  onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                                                <EditableDetailItem label="Bank Name"     field="bank_name"              value={editData.bank_name}              onChange={handleChange} options={meta['bank_name']} category="bank_name" isEditing={editingSection === 'bnk'} />
-                                                <EditableDetailItem label="Branch"        field="bank_branch"            value={editData.bank_branch}            onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                                                <EditableDetailItem label="Account #"     field="bank_account_number"    value={editData.bank_account_number}    onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                                                <EditableDetailItem label="IFSC Code"     field="ifsc_code"              value={editData.ifsc_code}              onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                                                <EditableDetailItem label="Loan App #"    field="loan_application_number"value={editData.loan_application_number}onChange={handleChange} isEditing={editingSection === 'bnk'} />
-                                            </div>
-                                        </section>
-                                    </div>
-                                )}
+                    {/* ── CHECKLIST ── */}
+                    {activeTab === 'checklist' && (
+                        <div className="space-y-3 animate-in fade-in duration-300">
+                            {checklistDirty && (
+                                <div className="flex items-center justify-between bg-amber-50/60 p-3 px-4 rounded-xl border border-amber-100 mb-3">
+                                    <span className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                        Unsaved changes in checklist
+                                    </span>
+                                    <button onClick={async () => {
+                                        const updates = { project_checklist: localChecklist };
+                                        localChecklist.forEach(item => {
+                                            if (['file_ready_to_customer', 'file_given_to_customer', 'meter_file_submission', 'meter_instaled', 'panel_and_inverter', 'fabrication_and_wiring'].includes(item.id)) {
+                                                updates[item.id] = item.checked;
+                                            }
+                                            if (item.id === 'panel_and_inverter') {
+                                                updates.panel_and_inverter_remarks = item.remark || '';
+                                            }
+                                            if (item.id === 'fabrication_and_wiring') {
+                                                updates.fabrication_and_wiring_remarks = item.remark || '';
+                                            }
+                                        });
+                                        await onUpdate(customer.id, updates);
+                                        setChecklistDirty(false);
+                                        fetchLogs();
+                                    }}
+                                        className="bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-amber-700 transition-colors">Save Checklist</button>
+                                </div>
+                            )}
 
-                                {/* ── CHECKLIST ── */}
-                                {activeTab === 'checklist' && (
-                                    <div className="space-y-4 animate-in fade-in duration-300">
-                                        <div className="flex items-center justify-between bg-white p-5 rounded-2xl border border-stone-100 shadow-sm mb-4">
-                                            <div>
-                                                <h3 className="text-sm font-bold text-stone-800">Installation Progress</h3>
-                                                <p className="text-[9px] text-stone-400 font-bold uppercase mt-1">{localChecklist.filter(i => i.checked).length} / {localChecklist.length} Items Cleared</p>
-                                            </div>
-                                            {checklistDirty && (
-                                                <button onClick={async () => { await onUpdate(customer.id, { project_checklist: localChecklist }); setChecklistDirty(false); fetchLogs(); }}
-                                                    className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-bold">Save Checklist</button>
-                                            )}
-                                        </div>
-                                        <div className="space-y-4">
-                                            {sections.map(sec => (
-                                                <div key={sec} className="bg-white p-5 rounded-2xl border border-stone-100 shadow-sm">
-                                                    <h4 className="text-[9px] font-bold text-stone-400 mb-4 uppercase tracking-widest border-b border-stone-50 pb-2">{sec}</h4>
-                                                    <div className="flex flex-col gap-3">
-                                                        {localChecklist.filter(i => i.section === sec).map(item => (
-                                                            <label key={item.id} className="flex items-start gap-3 cursor-pointer group p-1.5 hover:bg-stone-50 rounded-lg transition-colors">
-                                                                <input type="checkbox" checked={item.checked} onChange={() => {
-                                                                    const updated = localChecklist.map(i => i.id === item.id ? { ...i, checked: !i.checked, checkedAt: new Date().toISOString(), checkedBy: user.name } : i);
-                                                                    setLocalChecklist(updated); setChecklistDirty(true);
-                                                                }} className="mt-0.5 rounded border-stone-300 text-amber-500 focus:ring-amber-500" />
-                                                                <div className="flex-1">
-                                                                    <span className={`text-xs block ${item.checked ? 'text-stone-400 line-through' : 'text-stone-700 font-medium'}`}>{item.label}</span>
-                                                                    {item.checked && <span className="text-[8px] text-stone-400 font-bold uppercase mt-0.5 block">By {item.checkedBy} on {formatLogDate(item.checkedAt)}</span>}
+                            {/* Add Custom Item Section */}
+                            <div className="bg-white p-4 rounded-xl border border-stone-100 shadow-sm mb-3">
+                                <h4 className="text-[9px] font-bold text-stone-400 mb-2.5 uppercase tracking-widest border-b border-stone-50 pb-1.5">Add Custom Checklist Item</h4>
+                                <div className="flex gap-2">
+                                    <input type="text" placeholder="e.g. Verify solar net meter application..." value={newItemLabel}
+                                        onChange={e => setNewItemLabel(e.target.value)}
+                                        className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-amber-400" />
+                                    <button onClick={() => {
+                                        const label = newItemLabel.trim();
+                                        if (!label) return;
+                                        const newItem = {
+                                            id: `custom_${Date.now()}`,
+                                            label,
+                                            section: 'Project Checklist',
+                                            checked: false,
+                                            remark: '',
+                                        };
+                                        setLocalChecklist([...localChecklist, newItem]);
+                                        setNewItemLabel('');
+                                        setChecklistDirty(true);
+                                    }} className="bg-stone-900 text-white px-3.5 rounded-lg text-xs font-bold hover:bg-stone-800 transition-all flex items-center gap-1.5">
+                                        <Plus className="w-3.5 h-3.5" /> Add
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                {sections.map(sec => (
+                                    <div key={sec} className="bg-white p-4 rounded-xl border border-stone-100 shadow-sm">
+                                        <h4 className="text-[9px] font-bold text-stone-400 mb-3 uppercase tracking-widest border-b border-stone-50 pb-1.5">{sec}</h4>
+                                        <div className="flex flex-col gap-2">
+                                            {localChecklist.filter(i => i.section === sec).map(item => (
+                                                <div key={item.id} className="py-1.5 px-3 bg-stone-50/50 rounded-xl border border-stone-100 hover:border-stone-200 transition-all flex items-center justify-between gap-3">
+                                                    <label className="flex items-start gap-3 cursor-pointer flex-1 min-w-0">
+                                                        <input type="checkbox" checked={item.checked} onChange={() => {
+                                                            const updated = localChecklist.map(i => i.id === item.id ? { ...i, checked: !i.checked, checkedAt: new Date().toISOString(), checkedBy: user.name } : i);
+                                                            setLocalChecklist(updated); setChecklistDirty(true);
+                                                        }} className="mt-0.5 rounded border-stone-300 text-amber-500 focus:ring-amber-500 cursor-pointer" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <span className={`text-xs block font-semibold ${item.checked ? 'text-stone-400 line-through font-normal' : 'text-stone-700'}`}>{item.label}</span>
+                                                            {item.checked && <span className="text-[8px] text-stone-400 font-bold uppercase mt-0.5 block">By {item.checkedBy} on {formatLogDate(item.checkedAt)}</span>}
+                                                        </div>
+                                                    </label>
+
+                                                    <div className="flex items-center gap-2 text-[11px] flex-shrink-0">
+                                                        {(item.id === 'panel_and_inverter' || item.id === 'fabrication_and_wiring') ? (
+                                                            editingRemarkId === item.id ? (
+                                                                <div className="flex gap-1.5 items-center">
+                                                                    <input type="text" placeholder="Remark..." defaultValue={item.remark || ''}
+                                                                        id={`remark_input_${item.id}`}
+                                                                        className="bg-white border border-stone-200 rounded-lg px-2 py-1 text-[11px] outline-none focus:ring-1 focus:ring-amber-300 w-32 sm:w-40" />
+                                                                    <button onClick={() => {
+                                                                        const val = document.getElementById(`remark_input_${item.id}`).value.trim();
+                                                                        const updated = localChecklist.map(i => i.id === item.id ? { ...i, remark: val } : i);
+                                                                        setLocalChecklist(updated);
+                                                                        setChecklistDirty(true);
+                                                                        setEditingRemarkId(null);
+                                                                    }} className="bg-stone-900 text-white px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-stone-800 transition-colors">Done</button>
+                                                                    <button onClick={() => setEditingRemarkId(null)} className="text-stone-400 hover:text-stone-600 text-[10px] font-medium">Cancel</button>
                                                                 </div>
-                                                            </label>
-                                                        ))}
+                                                            ) : (
+                                                                <div className="flex items-center gap-2">
+                                                                    {item.remark ? (
+                                                                        <div className="flex items-center gap-1.5 bg-amber-50/50 text-stone-600 px-2 py-1 rounded-lg border border-amber-100">
+                                                                            <span className="font-medium italic">Remark: {item.remark}</span>
+                                                                            <button onClick={() => setEditingRemarkId(item.id)} className="text-amber-600 hover:text-amber-700 font-bold transition-colors">Edit</button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <button onClick={() => setEditingRemarkId(item.id)} className="text-stone-400 hover:text-stone-600 font-semibold transition-colors flex items-center gap-1 border border-stone-200 hover:bg-stone-50 px-2 py-1 rounded-lg">
+                                                                            <span>+ Add Remark</span>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        ) : null}
+                                                        {item.id.startsWith('custom_') && (
+                                                            <button onClick={() => {
+                                                                const updated = localChecklist.filter(i => i.id !== item.id);
+                                                                setLocalChecklist(updated); setChecklistDirty(true);
+                                                            }} className="text-stone-300 hover:text-red-500 transition-colors p-1" title="Delete custom item">
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
-                                )}
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* ── NOTES & HISTORY ── */}
                     {activeTab === 'history' && (

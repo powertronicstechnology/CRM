@@ -81,7 +81,7 @@ export default function Dashboard({ user, onLogout }) {
             : active.filter(c => c.poc === user.name);
         const results = authorized.filter(c =>
             c.customer_name?.toLowerCase().includes(q) ||
-            c.phone?.includes(globalSearch.trim()) ||
+            String(c.phone_number || '').includes(globalSearch.trim()) ||
             c.crn?.toLowerCase().includes(q)
         ).slice(0, 8);
         setGlobalResults(results);
@@ -142,11 +142,13 @@ export default function Dashboard({ user, onLogout }) {
     const handleAddLead = async (data) => {
         const leadData = { ...data, application_done_by: user.name, created_at: new Date().toISOString() };
         const { error } = await supabase.from('admin').insert(leadData).select().single();
-        if (!error) {
-            logActivity(user.id, 'create', `Added new lead: ${data.customer_name}`, `Done by: ${user.name}`);
-            setShowAddLead(false);
-            fetchData();
+        if (error) {
+            console.error('Error adding lead:', error);
+            throw new Error(error.message || 'Failed to add lead.');
         }
+        logActivity(user.id, 'create', `Added new lead: ${data.customer_name}`, `Done by: ${user.name}`);
+        setShowAddLead(false);
+        fetchData();
     };
 
     // ── Derived data (active = non-deleted only) ───────────────────────────────
@@ -166,7 +168,7 @@ export default function Dashboard({ user, onLogout }) {
         const q = stageSearch.toLowerCase();
         const matchesSearch = !stageSearch ||
             c.customer_name?.toLowerCase().includes(q) ||
-            c.phone?.includes(stageSearch) ||
+            String(c.phone_number || '').includes(stageSearch) ||
             c.crn?.toLowerCase().includes(q);
         return c.stage === selectedStage && matchesSearch && isAuthorized(c);
     });
@@ -312,7 +314,7 @@ export default function Dashboard({ user, onLogout }) {
                                                 <span className="text-[9px] bg-stone-100 text-stone-400 px-1.5 py-0.5 rounded font-bold uppercase ml-2">{c.crn || '–'}</span>
                                             </div>
                                             <p className="text-[10px] text-stone-400 mt-0.5">
-                                                {PRIMARY_STAGES.find(s => s.id === c.stage)?.label || c.stage} · {c.phone || 'No phone'}
+                                                {PRIMARY_STAGES.find(s => s.id === c.stage)?.label || c.stage} · {c.phone_number || 'No phone'}
                                             </p>
                                         </button>
                                     ))}

@@ -8,12 +8,10 @@
 
 import { FolderOpen, Activity, CheckCircle2 } from 'lucide-react';
 import { PRIMARY_STAGES } from '../constants';
+import { formatIndianCurrency } from '../utils';
 
 function fmtLakh(val) {
-    const n = Number(val) || 0;
-    if (n >= 10_00_000) return `₹${(n / 10_00_000).toFixed(2)} Cr`;
-    if (n >= 1_00_000)  return `₹${(n / 1_00_000).toFixed(2)} L`;
-    return `₹${n.toLocaleString('en-IN')}`;
+    return formatIndianCurrency(val, true);
 }
 
 const MetricBox = ({ label, value, sub, icon: Icon, color }) => {
@@ -48,9 +46,9 @@ export default function DashboardView({ customers = [], loading }) {
     const completedCount  = active.filter(c => c.stage === 'Completed').length;
     const liveProjects    = active.filter(c => c.stage !== 'Completed').length;
 
-    const totalQuoted    = active.reduce((s, c) => s + (Number(c.quoted_amount)   || 0), 0);
+    const totalQuoted    = active.reduce((s, c) => s + (Number(c.quoted_amount || c.total_cost)   || 0), 0);
     const totalReceived  = active.reduce((s, c) => s + (Number(c.total_received)  || 0), 0);
-    const totalDues      = active.reduce((s, c) => s + (Number(c.receivables)     || 0), 0);
+    const totalDues      = active.reduce((s, c) => s + Math.max(0, (Number(c.quoted_amount || c.total_cost) || 0) - (Number(c.discount) || 0) - (Number(c.total_received) || 0)), 0);
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">

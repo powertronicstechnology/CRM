@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { logActivity } from '../utils';
+import { logActivity, formatDate } from '../utils';
 import { USER_TYPE_OPTIONS, ROLE_OPTIONS } from '../constants';
 import { ShieldCheck, Plus, RefreshCw, AlertTriangle, Eye, EyeOff, UserCog, X } from 'lucide-react';
 
@@ -216,7 +216,7 @@ export default function UserManagementView({ currentUser }) {
                                         </select>
                                     </td>
                                     <td className="px-4 py-3 text-xs text-stone-500">
-                                        {profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-IN') : '–'}
+                                        {formatDate(profile.created_at)}
                                     </td>
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-1 justify-end">

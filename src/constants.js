@@ -3,29 +3,28 @@
 // CRN prefix: PT 25-26=
 
 import {
-    FileText, Clock, Users, Building2, Zap, Wrench, Banknote,
-    Banknote, CreditCard, AlertCircle, IndianRupee,
+    FileText, FileCheck, FileUp, Globe, Landmark, Users, UserCheck, Sun, Package, Clock, Hammer, Zap, Wrench, ClipboardCheck, Gauge, Coins, Banknote, IndianRupee, CreditCard, AlertCircle,
 } from 'lucide-react';
 
 export const PRIMARY_STAGES = [
     { id: 'REGISTRATION PENDING', label: 'Registration Pending', icon: FileText },
-    { id: 'REGISTRATION DONE', label: 'Registration Done', icon: FileText },
-    { id: 'DOCUMENTS PENDING', label: 'Documents Pending', icon: Clock },
-    { id: 'PORTAL STEPS PENDING', label: 'Portal Steps Pending', icon: Clock },
-    { id: 'LOAN PROCESS PENDING', label: 'Loan Process Pending', icon: Clock },
-    { id: 'VENDOR SELECTION PENDING', label: 'Vendor Selection Pending', icon: Clock },
-    { id: 'PT VENDOR SELECTED', label: 'Pt Vendor Selected', icon: Users },
-    { id: 'DCR PENDING', label: 'Dcr Pending', icon: Clock },
-    { id: 'PANEL PENDING', label: 'Panel Pending', icon: Clock },
+    { id: 'REGISTRATION DONE', label: 'Registration Done', icon: FileCheck },
+    { id: 'DOCUMENTS PENDING', label: 'Documents Pending', icon: FileUp },
+    { id: 'PORTAL STEPS PENDING', label: 'Portal Steps Pending', icon: Globe },
+    { id: 'LOAN PROCESS PENDING', label: 'Loan Process Pending', icon: Landmark },
+    { id: 'VENDOR SELECTION PENDING', label: 'Vendor Selection Pending', icon: Users },
+    { id: 'PT VENDOR SELECTED', label: 'Pt Vendor Selected', icon: UserCheck },
+    { id: 'DCR PENDING', label: 'Dcr Pending', icon: Sun },
+    { id: 'PANEL PENDING', label: 'Panel Pending', icon: Package },
     { id: 'INSTALLATION PENDING', label: 'Installation Pending', icon: Clock },
-    { id: 'FABRICATION COMPLETED', label: 'Fabrication Completed', icon: Building2 },
+    { id: 'FABRICATION COMPLETED', label: 'Fabrication Completed', icon: Hammer },
     { id: 'WIRING COMPLETED', label: 'Wiring Completed', icon: Zap },
     { id: 'INSTALLATION COMPLETED', label: 'Installation Completed', icon: Wrench },
-    { id: 'MGVCL APPROVAL PENDING', label: 'Mgvcl Approval Pending', icon: Clock },
-    { id: 'MGVCL METER PENDING', label: 'Mgvcl Meter Pending', icon: Clock },
-    { id: 'SUBSIDY REDEEM PENDING', label: 'Subsidy Redeem Pending', icon: Clock },
+    { id: 'MGVCL APPROVAL PENDING', label: 'Mgvcl Approval Pending', icon: ClipboardCheck },
+    { id: 'MGVCL METER PENDING', label: 'Mgvcl Meter Pending', icon: Gauge },
+    { id: 'SUBSIDY REDEEM PENDING', label: 'Subsidy Redeem Pending', icon: Coins },
     { id: 'SUBSIDY REDEEMED', label: 'Subsidy Redeemed', icon: Banknote },
-    { id: 'SUBSIDY AMOUNT DISBURSED', label: 'Subsidy Amount Disbursed', icon: Banknote },
+    { id: 'SUBSIDY AMOUNT DISBURSED', label: 'Subsidy Amount Disbursed', icon: IndianRupee },
 ];
 
 // ─── Financial Tags (customise as needed) ────────────────────────────────────
@@ -42,7 +41,7 @@ export const FINANCIAL_TAG_COLORS = {
 };
 
 // Supabase metadata table categories (one per managed dropdown)
-export const META_CATEGORIES = ['panel', 'inverter', 'meter_phase', 'file_given_to_customer', 'meter_file_submission', 'meter_instaled', 'panel_and_inverter', 'fabrication_and_wiring', 'subsidy_approval_status'];
+export const META_CATEGORIES = ['panel', 'inverter', 'meter_phase', 'file_given_to_customer', 'meter_file_submission', 'meter_instaled', 'panel_and_inverter', 'fabrication_and_wiring', 'subsidy_approval_status', 'project_type', 'payment_type'];
 
 export const USER_TYPE_OPTIONS = ['admin', 'sales', 'agent'];
 export const ROLE_OPTIONS      = ['Manager', 'Sales Executive', 'Field Agent', 'Operations', 'Finance'];

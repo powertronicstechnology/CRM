@@ -10,7 +10,12 @@ import { PRIMARY_STAGES, FINANCIAL_TAG_COLORS, FINANCIAL_TAGS } from '../constan
 
 function formatDate(d) {
     if (!d) return '–';
-    return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return d;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
 }
 
 function TrashDetailDrawer({ customer, onClose }) {
@@ -32,20 +37,20 @@ function TrashDetailDrawer({ customer, onClose }) {
                 <div className="p-6 space-y-3">
                     {[
                         ['CRN',              customer.crn],
-                        ['Phone',            customer.phone],
+                        ['Phone',            customer.phone_number],
                         ['Email',            customer.email],
-                        ['Location',         customer.location],
+                        ['Location',         customer.full_installation_address],
                         ['Branch',           customer.company_branch],
                         ['POC',              customer.poc],
-                        ['Capacity',         customer.capacity_kwp ? `${customer.capacity_kwp} kWp` : null],
+                        ['Capacity',         customer.system_capacity_kwp ? `${customer.system_capacity_kwp} kWp` : null],
                         ['Project Type',     customer.project_type],
                         ['Stage at Deletion',PRIMARY_STAGES.find(s => s.id === customer.stage)?.label || customer.stage],
                         ['Quoted Amount',    customer.quoted_amount ? `₹${Number(customer.quoted_amount).toLocaleString('en-IN')}` : null],
                         ['Total Received',   customer.total_received ? `₹${Number(customer.total_received).toLocaleString('en-IN')}` : null],
                     ].map(([label, val]) => val ? (
-                        <div key={label} className="flex justify-between text-sm">
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wide">{label}</span>
-                            <span className="text-stone-700 font-medium">{val}</span>
+                        <div key={label} className="flex justify-between text-sm gap-4">
+                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wide mt-0.5">{label}</span>
+                            <span className="text-stone-700 font-medium text-right break-words max-w-[70%]">{val}</span>
                         </div>
                     ) : null)}
                     {tagInfo && (

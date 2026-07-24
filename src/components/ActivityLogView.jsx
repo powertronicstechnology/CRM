@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { Activity } from 'lucide-react';
+import { formatLogDate } from '../utils';
 
 const ACTION_COLORS = {
     create:       'bg-green-100 text-green-700',
@@ -57,7 +58,7 @@ export default function ActivityLogView() {
                         <p className="text-sm text-stone-800">{log.message}</p>
                         {log.new_value && <p className="text-xs text-stone-500 mt-0.5">{log.new_value}</p>}
                         <p className="text-[10px] text-stone-400 mt-1 font-bold uppercase">
-                            {log.profiles?.name || 'Unknown'} • {new Date(log.created_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                            {log.profiles?.name || 'Unknown'} • {formatLogDate(log.created_at)}
                         </p>
                     </div>
                 </div>

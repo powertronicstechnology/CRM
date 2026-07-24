@@ -4,7 +4,7 @@ import { Users, Zap, IndianRupee, Wallet, Target, ChevronRight, Activity, Trendi
 export default function DashboardView({ customers = [], loading }) {
     if (loading) return <div className="p-20 text-center animate-pulse text-gray-400 font-bold uppercase tracking-widest">Analyzing Data...</div>;
 
-    const totalCapacity = customers.reduce((sum, c) => sum + (Number(c.capacity) || 0), 0);
+    const totalCapacity = customers.reduce((sum, c) => sum + (Number(c.system_capacity_kwp) || 0), 0);
     const totalRevenue = customers.reduce((sum, c) => sum + (Number(c.quoted_amount) || 0), 0);
     const completedProjects = customers.filter(c => c.stage === 'completed').length;
     
@@ -85,7 +85,8 @@ export default function DashboardView({ customers = [], loading }) {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-bold text-gray-800 truncate">{c.customer_name}</p>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{c.capacity}kWp • {c.location}</p>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{c.system_capacity_kwp || '–'}kWp</p>
+                                        <p className="text-[10px] text-gray-500 mt-0.5 break-words">{c.full_installation_address}</p>
                                     </div>
                                 </div>
                             ))}

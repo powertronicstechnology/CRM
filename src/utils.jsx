@@ -8,11 +8,18 @@ import { PRIMARY_STAGES, FINANCIAL_TAGS } from './constants';
 // ─── Activity Logging ─────────────────────────────────────────────────────────
 export async function logActivity(userId, action, message, details = '') {
     try {
-        await supabase.from('activity_log').insert({
-            user_id: userId, action, message,
-            new_value: details, created_at: new Date().toISOString(),
+        const { error } = await supabase.from('activity_log').insert({
+            user_id: userId || null, 
+            action, 
+            message,
+            new_value: details || null
         });
-    } catch (e) { console.error('Activity log error:', e); }
+        if (error) {
+            console.error('Supabase activity log error:', error);
+        }
+    } catch (e) { 
+        console.error('Activity log exception:', e); 
+    }
 }
 
 // ─── Metadata Hook ────────────────────────────────────────────────────────────
@@ -24,12 +31,22 @@ export function useMetadata() {
     const [meta, setMeta] = useState({});
     useEffect(() => {
         supabase.from('metadata').select('category, label').then(({ data }) => {
-            if (!data) return;
-            const grouped = {};
-            data.forEach(({ category, label }) => {
-                if (!grouped[category]) grouped[category] = [];
-                grouped[category].push(label);
-            });
+            const defaults = {
+                panel: ['ADANI', 'WAAREE', 'PAHAL', 'ADANI TOPCON', 'WAAREE TOPCON', 'PAHAL TOPCON'],
+                inverter: ['SOLARYAAN', 'KSOLARE', 'GROWATT', 'POLYCAB', 'WAAREE', 'YAAN'],
+                meter_phase: ['S', 'T', 'T (EXTEN)'],
+                payment_type: ['Online', 'Cheque'],
+                project_type: ['General', 'PM Surya Ghar'],
+            };
+            const grouped = { ...defaults };
+            if (data) {
+                data.forEach(({ category, label }) => {
+                    if (!grouped[category]) grouped[category] = [];
+                    if (!grouped[category].includes(label)) {
+                        grouped[category].push(label);
+                    }
+                });
+            }
             setMeta(grouped);
         });
     }, []);
@@ -41,7 +58,7 @@ export function exportAllToCSV(customers) {
     const headers = [
         'CRN', 'Customer Name', 'Phone', 'Email', 'Location', 'Branch',
         'Capacity (kWp)', 'Project Type', 'POC', 'Stage', 'Financial Tag',
-        'Quoted Amount', 'Bank Quote', 'Receivables', 'Discount',
+        'Quoted Amount', 'Quoted Amount 2', 'Bank Quote', 'Receivables', 'Discount',
         'Payment Type', 'Bank Name', 'Account #', 'IFSC', 'Loan Application #',
         'Meter Category', 'EB Number', 'DTR Code', 'Sanctioned Load',
         'DISCOM Division', 'Net Metering', 'Vendor', 'Aadhar',
@@ -50,11 +67,11 @@ export function exportAllToCSV(customers) {
     const rows = customers.map(c => {
         const tagLabel = FINANCIAL_TAGS.find(f => f.id === c.financial_tag)?.label || c.financial_tag || '';
         return [
-            c.crn || '', c.customer_name || '', c.phone || '', c.email || '',
-            c.location || '', c.company_branch || '', c.capacity_kwp || '',
+            c.crn || '', c.customer_name || '', c.phone_number || '', c.email || '',
+            c.full_installation_address || '', c.company_branch || '', c.system_capacity_kwp || '',
             c.project_type || '', c.poc || '',
             PRIMARY_STAGES.find(s => s.id === c.stage)?.label || c.stage || '',
-            tagLabel, c.quoted_amount || '', c.quote_to_bank || '',
+            tagLabel, c.quoted_amount || '', c.quoted_amount_2 || '', c.quote_to_bank || '',
             c.receivables || '', c.discount || '',
             c.payment_type || '', c.bank_name || '', c.bank_account_number || '',
             c.ifsc_code || '', c.loan_application_number || '', c.meter_category || '',
@@ -77,11 +94,37 @@ export function exportAllToCSV(customers) {
 
 // ─── Date / Number Formatters ─────────────────────────────────────────────────
 export function formatLogDate(dateStr) {
-    return new Date(dateStr).toLocaleString('en-IN', {
-        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true,
-    });
+    if (!dateStr) return '–';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return `${day}-${month}-${year} ${timeStr}`;
 }
 
 export function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString('en-IN');
+    if (!dateStr) return '–';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+}
+
+export function formatIndianCurrency(val, compact = true) {
+    const n = Number(val) || 0;
+    if (compact) {
+        if (n >= 1_00_00_000) {
+            const formatted = (n / 1_00_00_000).toFixed(2);
+            return `₹${parseFloat(formatted)} Cr`;
+        }
+        if (n >= 1_00_000) {
+            const formatted = (n / 1_00_000).toFixed(2);
+            return `₹${parseFloat(formatted)} L`;
+        }
+    }
+    return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }

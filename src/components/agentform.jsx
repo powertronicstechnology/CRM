@@ -60,7 +60,7 @@ function SuccessScreen({ customerName, quotationNumber, onAnother }) {
 export default function AgentForm({ user, onLogout }) {
     const empty = {
         customer_name: '', phone: '', email: '', location: '',
-        company_branch: '', capacity_kwp: '', project_type: 'On-Grid',
+        company_branch: '', system_capacity_kwp: '', project_type: 'On-Grid',
         poc: '', quoted_amount: '',
     };
 
@@ -80,7 +80,7 @@ export default function AgentForm({ user, onLogout }) {
         if (!form.phone.trim()) e.phone = 'Phone is required';
         if (!form.location.trim()) e.location = 'Location is required';
         if (!form.company_branch) e.company_branch = 'Branch is required';
-        if (!form.capacity_kwp) e.capacity_kwp = 'Capacity is required';
+        if (!form.system_capacity_kwp) e.system_capacity_kwp = 'Capacity is required';
         return e;
     };
 
@@ -93,14 +93,15 @@ export default function AgentForm({ user, onLogout }) {
         try {
             const { error } = await supabase.from('admin').insert({
                 customer_name: form.customer_name.trim(),
-                phone: form.phone.trim(),
+                phone_number: form.phone.trim(),
                 email: form.email.trim() || null,
-                location: form.location.trim(),
+                full_installation_address: form.location.trim(),
                 company_branch: form.company_branch,
-                capacity_kwp: form.capacity_kwp ? Number(form.capacity_kwp) : null,
+                system_capacity_kwp: form.system_capacity_kwp ? Number(form.system_capacity_kwp) : null,
                 project_type: form.project_type,
                 poc: form.poc || user.name,
                 quoted_amount: form.quoted_amount ? Number(form.quoted_amount) : null,
+                total_cost: form.quoted_amount ? Number(form.quoted_amount) : null,
                 application_done_by: user.name,
                 stage: 'Leads',
                 payments: [],
@@ -114,7 +115,7 @@ export default function AgentForm({ user, onLogout }) {
                 user_id: user.id,
                 action: 'create',
                 message: `Added new lead ${form.customer_name.trim()}`,
-                new_value: `${form.capacity_kwp} kWp ${form.project_type} • ${form.company_branch}`,
+                new_value: `${form.system_capacity_kwp} kWp ${form.project_type} • ${form.company_branch}`,
             });
 
             setSubmitted({ customerName: form.customer_name.trim(), quotationNumber: '' });
@@ -178,7 +179,8 @@ export default function AgentForm({ user, onLogout }) {
                     <Field label="Phone" required error={errors.phone}>
                         <div className="relative">
                             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none" />
-                            <input type="tel" value={form.phone} onChange={e => set('phone', e.target.value)}
+                            <input type="tel" value={form.phone} 
+                                onChange={e => set('phone', e.target.value.replace(/[^0-9+\s-]/g, ''))}
                                 placeholder="+91 XXXXX XXXXX" className={`${inputClass('phone')} pl-10`} />
                         </div>
                     </Field>
@@ -193,9 +195,9 @@ export default function AgentForm({ user, onLogout }) {
 
                     <Field label="Location" required error={errors.location}>
                         <div className="relative">
-                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none" />
-                            <input type="text" value={form.location} onChange={e => set('location', e.target.value)}
-                                placeholder="Site location / village" className={`${inputClass('location')} pl-10`} />
+                            <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-600 pointer-events-none" />
+                            <textarea value={form.location} onChange={e => set('location', e.target.value)} rows={2}
+                                placeholder="Site location / village" className={`${inputClass('location')} pl-10 pt-2.5 resize-none`} />
                         </div>
                     </Field>
 
@@ -217,9 +219,9 @@ export default function AgentForm({ user, onLogout }) {
 
                     <SectionHeader icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} label="Project Details" />
 
-                    <Field label="Capacity (kWp)" required error={errors.capacity_kwp}>
-                        <input type="number" value={form.capacity_kwp} onChange={e => set('capacity_kwp', e.target.value)}
-                            placeholder="e.g. 5" min="0" step="0.5" className={inputClass('capacity_kwp')} />
+                    <Field label="Capacity (kWp)" required error={errors.system_capacity_kwp}>
+                        <input type="number" value={form.system_capacity_kwp} onChange={e => set('system_capacity_kwp', e.target.value)}
+                            placeholder="e.g. 5" min="0" step="0.5" className={inputClass('system_capacity_kwp')} />
                     </Field>
 
                     <Field label="Quoted Amount (₹)">

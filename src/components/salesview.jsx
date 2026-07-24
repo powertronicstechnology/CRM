@@ -5,7 +5,7 @@ import {
     CreditCard, Gauge, FileText, Clock, CheckCircle2, Users,
     ShoppingCart, Package, Wrench, Banknote, ClipboardCheck, FolderOpen
 } from 'lucide-react';
-
+import { formatLogDate } from '../utils';
 const STAGES = [
     { id: 'leads',                  label: 'Leads',                icon: Users },
     { id: 'sales_closed',           label: 'Sales Closed',         icon: ShoppingCart },
@@ -88,15 +88,22 @@ function CustomerSheet({ customer, onClose, onUpdate, userName }) {
     const [saving, setSaving] = useState(false);
     const [followUpText, setFollowUpText] = useState('');
 
-    const set = (field, val) => setEditData(prev => ({ ...prev, [field]: val }));
+    const set = (field, val) => setEditData(prev => {
+        let cleanVal = val;
+        if (field === 'phone_number' && typeof val === 'string') {
+            cleanVal = val.replace(/[^0-9+\s-]/g, '');
+        }
+        return { ...prev, [field]: cleanVal };
+    });
 
     const handleSave = async () => {
         setSaving(true);
         const updates = { ...editData };
         delete updates.id; delete updates.created_at; delete updates.follow_ups;
         updates.total_cost = Number(updates.total_cost) || 0;
+        updates.quoted_amount = updates.total_cost;
         updates.quoted_price_bank = Number(updates.quoted_price_bank) || 0;
-        updates.capacity_kwp = Number(updates.capacity_kwp) || 0;
+        updates.system_capacity_kwp = Number(updates.system_capacity_kwp) || 0;
         await onUpdate(customer.id, updates);
         setIsEditing(false);
         setSaving(false);
@@ -161,12 +168,12 @@ function CustomerSheet({ customer, onClose, onUpdate, userName }) {
                         isEditing ? (
                             <div>
                                 <EditInput label="Customer Name" value={editData.customer_name} onChange={v => set('customer_name', v)} />
-                                <EditInput label="Phone" value={editData.phone} onChange={v => set('phone', v)} type="tel" />
+                                <EditInput label="Phone" value={editData.phone_number} onChange={v => set('phone_number', v)} type="tel" />
                                 <EditInput label="Email" value={editData.email} onChange={v => set('email', v)} type="email" />
-                                <EditInput label="Location" value={editData.location} onChange={v => set('location', v)} />
+                                <EditInput label="Location" value={editData.full_installation_address} onChange={v => set('full_installation_address', v)} textarea />
                                 <EditInput label="Branch" value={editData.branch} onChange={v => set('branch', v)}
                                     options={['Srikalahasti','Tirupati','Tada','Puttur','Nagari','Pichatur']} />
-                                <EditInput label="Capacity (kWp)" value={editData.capacity_kwp} onChange={v => set('capacity_kwp', v)} type="number" />
+                                <EditInput label="Capacity (kWp)" value={editData.system_capacity_kwp} onChange={v => set('system_capacity_kwp', v)} type="number" />
                                 <EditInput label="System Type" value={editData.project_type} onChange={v => set('project_type', v)}
                                     options={['On-Grid','Off-Grid','Hybrid']} />
                                 <EditInput label="Intent" value={editData.intent_level} onChange={v => set('intent_level', v)}
@@ -176,11 +183,11 @@ function CustomerSheet({ customer, onClose, onUpdate, userName }) {
                             </div>
                         ) : (
                             <div>
-                                <FieldRow label="Phone" value={customer.phone} icon={Phone} />
+                                <FieldRow label="Phone" value={customer.phone_number} icon={Phone} />
                                 <FieldRow label="Email" value={customer.email} icon={Mail} />
-                                <FieldRow label="Location" value={customer.location} icon={MapPin} />
+                                <FieldRow label="Location" value={customer.full_installation_address} icon={MapPin} />
                                 <FieldRow label="Branch" value={customer.branch} icon={Building2} />
-                                <FieldRow label="Capacity" value={customer.capacity_kwp ? `${customer.capacity_kwp} kWp` : null} icon={Zap} isEnergy />
+                                <FieldRow label="Capacity" value={customer.system_capacity_kwp ? `${customer.system_capacity_kwp} kWp` : null} icon={Zap} isEnergy />
                                 <FieldRow label="System Type" value={customer.project_type} />
                                 <FieldRow label="Intent" value={customer.intent_level} />
                                 <FieldRow label="Site Remarks" value={customer.site_remarks} icon={FileText} />
@@ -248,7 +255,7 @@ function CustomerSheet({ customer, onClose, onUpdate, userName }) {
                                             <p className="text-sm text-gray-700">{f.text}</p>
                                             <div className="flex justify-between mt-1.5 text-[10px] text-gray-400">
                                                 <span>{f.authorId}</span>
-                                                <span>{new Date(f.date).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                                <span>{formatLogDate(f.date)}</span>
                                             </div>
                                         </div>
                                     ))
@@ -317,15 +324,15 @@ function SalesCard({ customer, onSelect }) {
                 )}
             </div>
 
-            <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
-                <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                    <span className="truncate">{customer.location || '–'}</span>
-                </span>
-                <span className="flex items-center gap-1 flex-shrink-0">
-                    <Zap className="w-3.5 h-3.5 text-blue-500" />
-                    <span className="text-blue-600 font-medium">{customer.capacity_kwp || '–'} kWp</span>
-                </span>
+            <div className="space-y-1.5 text-sm text-gray-600 mb-3">
+                <div className="flex items-start gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <span className="break-words flex-1">{customer.full_installation_address || '–'}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <Zap className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    <span className="text-blue-600 font-medium">{customer.system_capacity_kwp || '–'} kWp</span>
+                </div>
             </div>
 
             <div className="flex items-center justify-between">
@@ -338,11 +345,11 @@ function SalesCard({ customer, onSelect }) {
                 </span>
             </div>
 
-            {customer.phone && (
-                <a href={`tel:${customer.phone}`} onClick={e => e.stopPropagation()}
+            {customer.phone_number && (
+                <a href={`tel:${customer.phone_number}`} onClick={e => e.stopPropagation()}
                     className="mt-3 flex items-center gap-2 text-xs text-gray-500 border-t border-gray-50 pt-2.5">
                     <Phone className="w-3.5 h-3.5 text-gray-400" />
-                    {customer.phone}
+                    {customer.phone_number}
                 </a>
             )}
         </div>
@@ -359,8 +366,8 @@ export default function SalesView({ customers, loading, onUpdate, user }) {
         const q = searchQuery.toLowerCase();
         const matchesSearch = !q ||
             (c.customer_name && String(c.customer_name).toLowerCase().includes(q)) ||
-            (c.phone && String(c.phone).includes(q)) ||
-            (c.location && String(c.location).toLowerCase().includes(q));
+            (c.phone_number && String(c.phone_number).includes(q)) ||
+            (c.full_installation_address && String(c.full_installation_address).toLowerCase().includes(q));
         const matchesStage = !stageFilter || c.stage === stageFilter;
         return matchesSearch && matchesStage;
     });

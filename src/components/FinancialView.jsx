@@ -1,11 +1,7 @@
-// ─── FinancialView.jsx ────────────────────────────────────────────────────────
-// Displays all customers that have a financial_tag set, grouped by tag type.
-// Shows money totals and individual cards with quoted/received/pending amounts.
-// ──────────────────────────────────────────────────────────────────────────────
-
 import { useState } from 'react';
 import { Tag } from 'lucide-react';
 import { FINANCIAL_TAGS, FINANCIAL_TAG_COLORS } from '../constants';
+import { formatIndianCurrency } from '../utils';
 
 export default function FinancialView({ customers, onSelectCustomer }) {
     const [activeFilter, setActiveFilter] = useState(null);
@@ -13,9 +9,10 @@ export default function FinancialView({ customers, onSelectCustomer }) {
     const tagged = customers.filter(c => c.financial_tag);
 
     const totals = tagged.reduce((acc, c) => {
-        acc.quoted    += (Number(c.quoted_amount) || 0);
-        acc.received  += (Number(c.total_received) || 0);
-        acc.receivable += (Number(c.receivables) || 0);
+        const quotedVal = Number(c.quoted_amount || c.total_cost || 0);
+        acc.quoted     += quotedVal;
+        acc.received   += (Number(c.total_received) || 0);
+        acc.receivable += Math.max(0, quotedVal - (Number(c.discount) || 0) - (Number(c.total_received) || 0));
         return acc;
     }, { quoted: 0, received: 0, receivable: 0 });
 
@@ -38,15 +35,15 @@ export default function FinancialView({ customers, onSelectCustomer }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Total Quoted</p>
-                    <p className="text-2xl font-bold text-stone-800">₹{(totals.quoted / 100000).toFixed(2)}L</p>
+                    <p className="text-2xl font-bold text-stone-800">{formatIndianCurrency(totals.quoted, true)}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Total Received</p>
-                    <p className="text-2xl font-bold text-emerald-600">₹{(totals.received / 100000).toFixed(2)}L</p>
+                    <p className="text-2xl font-bold text-emerald-600">{formatIndianCurrency(totals.received, true)}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm border-b-4 border-b-orange-400">
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Total Receivable</p>
-                    <p className="text-2xl font-bold text-orange-600">₹{(totals.receivable / 100000).toFixed(2)}L</p>
+                    <p className="text-2xl font-bold text-orange-600">{formatIndianCurrency(totals.receivable, true)}</p>
                 </div>
             </div>
 
@@ -86,8 +83,9 @@ export default function FinancialView({ customers, onSelectCustomer }) {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {group.map(c => {
-                                const recv = Number(c.receivables) || 0;
+                                const quotedVal = Number(c.quoted_amount || c.total_cost || 0);
                                 const totalRec = Number(c.total_received) || 0;
+                                const recv = Math.max(0, quotedVal - (Number(c.discount) || 0) - totalRec);
                                 return (
                                     <button key={c.id} onClick={() => onSelectCustomer(c)}
                                         className="w-full bg-white rounded-2xl border border-stone-100 p-4 text-left hover:border-amber-200 hover:shadow-sm transition-all group">
@@ -100,15 +98,15 @@ export default function FinancialView({ customers, onSelectCustomer }) {
                                         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-stone-50">
                                             <div>
                                                 <p className="text-[9px] text-stone-400 font-bold uppercase">Quoted</p>
-                                                <p className="text-xs font-bold text-stone-700">₹{(Number(c.quoted_amount || 0) / 1000).toFixed(0)}k</p>
+                                                <p className="text-xs font-bold text-stone-700">{formatIndianCurrency(quotedVal, true)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[9px] text-stone-400 font-bold uppercase">Received</p>
-                                                <p className="text-xs font-bold text-emerald-600">₹{(totalRec / 1000).toFixed(0)}k</p>
+                                                <p className="text-xs font-bold text-emerald-600">{formatIndianCurrency(totalRec, true)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[9px] text-stone-400 font-bold uppercase">Pending</p>
-                                                <p className={`text-xs font-bold ${recv > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>₹{(recv / 1000).toFixed(0)}k</p>
+                                                <p className={`text-xs font-bold ${recv > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>{formatIndianCurrency(recv, true)}</p>
                                             </div>
                                         </div>
                                     </button>

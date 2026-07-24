@@ -83,9 +83,13 @@ export default function ActivityLogView({ onClose }) {
 
     const formatTime = (timestamp) => {
         if (!timestamp) return '';
-        return new Date(timestamp).toLocaleString('en-IN', {
-            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-        });
+        const d = new Date(timestamp);
+        if (isNaN(d.getTime())) return timestamp;
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return `${day}-${month}-${year} ${timeStr}`;
     };
 
     return (

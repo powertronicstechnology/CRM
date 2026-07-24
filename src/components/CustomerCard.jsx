@@ -5,8 +5,9 @@
 // ──────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useRef } from 'react';
-import { Zap, MapPin, User, Building2, Package, FolderOpen, ChevronDown } from 'lucide-react';
+import { Zap, MapPin, User, Building2, Package, FolderOpen, ChevronDown, Sun, Cpu } from 'lucide-react';
 import { PRIMARY_STAGES, FINANCIAL_TAGS, FINANCIAL_TAG_COLORS } from '../constants';
+import { formatIndianCurrency } from '../utils';
 
 export default function CustomerCard({ customer, onSelect, onMoveStage }) {
     const [showStageMenu, setShowStageMenu] = useState(false);
@@ -22,55 +23,79 @@ export default function CustomerCard({ customer, onSelect, onMoveStage }) {
     }, [showStageMenu]);
 
     const totalPaid = Number(customer.total_received) || 0;
-    const quotedAmt = Number(customer.quoted_amount || 0);
-    const balance   = quotedAmt - totalPaid;
-    const tagInfo   = FINANCIAL_TAGS.find(f => f.id === customer.financial_tag);
+    const quotedAmt = Number(customer.quoted_amount || customer.total_cost || 0);
+    const balance = quotedAmt - totalPaid;
+    const tagInfo = FINANCIAL_TAGS.find(f => f.id === customer.financial_tag);
     const tagColors = customer.financial_tag ? (FINANCIAL_TAG_COLORS[customer.financial_tag] || {}) : {};
 
     return (
         <div className="bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-amber-400 group flex flex-col">
             {/* Clickable top section */}
-            <div className="p-5 cursor-pointer flex-1" onClick={() => onSelect(customer)}>
-                <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-bold text-stone-800 group-hover:text-amber-600 transition-colors leading-tight">
+            <div className="p-6 cursor-pointer flex-1" onClick={() => onSelect(customer)}>
+                <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-base font-extrabold text-stone-800 group-hover:text-amber-600 transition-colors leading-tight">
                         {customer.customer_name}
                     </h3>
-                    <span className="text-[9px] bg-stone-50 text-stone-400 px-2 py-1 rounded font-bold uppercase ml-2 whitespace-nowrap">
+                    <span className="text-[10px] bg-stone-100 text-stone-500 px-2.5 py-1 rounded-md font-bold uppercase ml-2 whitespace-nowrap">
                         {customer.crn || 'NO-CRN'}
                     </span>
                 </div>
-                <div className="grid grid-cols-2 gap-y-1.5 mb-3">
-                    <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium">
-                        <Zap size={11} className="text-amber-500 flex-shrink-0" />
-                        <span>{customer.capacity_kwp ? `${customer.capacity_kwp} kWp` : '–'} {customer.project_type || ''}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium">
-                        <MapPin size={11} className="text-stone-300 flex-shrink-0" />
-                        <span className="truncate">{customer.location || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium">
-                        <User size={11} className="text-stone-300 flex-shrink-0" />
-                        <span className="truncate">{customer.poc || 'No POC'}</span>
-                    </div>
-                    {customer.phone && (
-                        <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium">
-                            <span className="text-stone-300">📞</span>
-                            <span>{customer.phone}</span>
+
+                {/* Badges for Capacity and Project Type */}
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg text-xs font-bold border border-amber-100">
+                        <Zap size={12} className="flex-shrink-0 text-amber-500" />
+                        {customer.system_capacity_kwp ? `${customer.system_capacity_kwp} kWp` : '–'}
+                    </span>
+                    {customer.project_type && (
+                        <span className="inline-flex items-center gap-1.5 bg-stone-50 text-stone-600 px-2.5 py-1 rounded-lg text-xs font-bold border border-stone-100 uppercase">
+                            <span>📋</span>
+                            {customer.project_type}
+                        </span>
+                    )}
+                </div>
+
+                {/* Main details list */}
+                <div className="space-y-2 mb-4 text-[13px] text-stone-600 font-medium">
+                    {customer.phone_number && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-stone-400 text-sm">📞</span>
+                            <span>{customer.phone_number}</span>
                         </div>
                     )}
-                    {customer.company_branch && (
-                        <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium col-span-2">
-                            <Building2 size={11} className="text-stone-300 flex-shrink-0" />
-                            <span>{customer.company_branch}</span>
-                        </div>
-                    )}
-                    {customer.vendor && (
-                        <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium col-span-2">
-                            <Package size={11} className="text-stone-300 flex-shrink-0" />
-                            <span>Vendor: {customer.vendor}</span>
+                    {customer.area && (
+                        <div className="flex items-center gap-2">
+                            <MapPin size={12} className="text-stone-400 flex-shrink-0" />
+                            <span>Area: <strong className="text-stone-800 font-bold">{customer.area}</strong></span>
                         </div>
                     )}
                 </div>
+
+                {/* Hardware components section with top divider */}
+                {(customer.panel || customer.inverter) && (
+                    <div className="pt-3 border-t border-stone-100 flex flex-col gap-2 text-xs text-stone-500 mb-4">
+                        {customer.panel && (
+                            <div className="flex items-center gap-2">
+                                <Sun size={12} className="text-amber-400 flex-shrink-0" />
+                                <span>Panel: <strong className="text-stone-700 font-semibold">{customer.panel}</strong></span>
+                            </div>
+                        )}
+                        {customer.inverter && (
+                            <div className="flex items-center gap-2">
+                                <Cpu size={12} className="text-stone-400 flex-shrink-0" />
+                                <span>Inverter: <strong className="text-stone-700 font-semibold">{customer.inverter}</strong></span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Vendor details */}
+                {customer.vendor && (
+                    <div className="flex items-center gap-2 text-xs text-stone-400 font-semibold">
+                        <Package size={12} className="text-stone-300 flex-shrink-0" />
+                        <span>Vendor: <strong className="text-stone-500 font-semibold">{customer.vendor}</strong></span>
+                    </div>
+                )}
                 {customer.google_docs && (
                     <div className="mb-3" onClick={e => e.stopPropagation()}>
                         <a href={customer.google_docs} target="_blank" rel="noopener noreferrer"
@@ -87,16 +112,16 @@ export default function CustomerCard({ customer, onSelect, onMoveStage }) {
                 <div className="grid grid-cols-3 gap-0 divide-x divide-stone-100 px-1 py-3">
                     <div className="text-center px-2">
                         <p className="text-[9px] font-bold text-stone-400 uppercase tracking-wide">Quoted</p>
-                        <p className="text-xs font-bold text-stone-700 mt-0.5">₹{(quotedAmt / 1000).toFixed(0)}k</p>
+                        <p className="text-xs font-bold text-stone-700 mt-0.5">{formatIndianCurrency(quotedAmt)}</p>
                     </div>
                     <div className="text-center px-2">
                         <p className="text-[9px] font-bold text-stone-400 uppercase tracking-wide">Received</p>
-                        <p className="text-xs font-bold text-emerald-600 mt-0.5">₹{(totalPaid / 1000).toFixed(0)}k</p>
+                        <p className="text-xs font-bold text-emerald-600 mt-0.5">{formatIndianCurrency(totalPaid)}</p>
                     </div>
                     <div className="text-center px-2">
                         <p className="text-[9px] font-bold text-stone-400 uppercase tracking-wide">Balance</p>
                         <p className={`text-xs font-bold mt-0.5 ${balance > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>
-                            ₹{(balance / 1000).toFixed(0)}k
+                            {formatIndianCurrency(balance)}
                         </p>
                     </div>
                 </div>
