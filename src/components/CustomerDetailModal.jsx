@@ -21,6 +21,18 @@ import { logActivity, formatLogDate, formatDate } from '../utils';
 import { supabase } from '../supabase';
 import HistoryEntryEditor from './HistoryEntryEditor';
 
+const GENERAL_TAGS = ["Initial", "Installation", "Final payment"];
+const PM_SURYA_TAGS = ["Registration payment 20k", "Installation payment", "Quotation amount", "Final payment after meter installation"];
+
+function getFinancialTags(projectType) {
+    if (!projectType) return GENERAL_TAGS;
+    const normalized = projectType.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (normalized.includes('surya')) {
+        return PM_SURYA_TAGS;
+    }
+    return GENERAL_TAGS;
+}
+
 // ─── formatMoney: Indian comma system (₹1,00,000) ────────────────────────────
 function fmt(val) {
     const n = Number(val);
@@ -92,10 +104,14 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
 }
 
 // ─── DetailItem / EditableDetailItem ──────────────────────────────────────────
-function DetailItem({ label, value, isMoney = false, isEnergy = false, noTruncate = false, className = "", type = "text" }) {
+function DetailItem({ label, value, isMoney = false, isEnergy = false, noTruncate = false, className = "", type = "text", options }) {
     let displayVal = value || '–';
     if (type === 'date' && value) {
         displayVal = formatDate(value);
+    }
+    if (options && Array.isArray(options)) {
+        const found = options.find(o => typeof o === 'object' && o !== null && o.value === value);
+        if (found) displayVal = found.label;
     }
     return (
         <div className={`bg-stone-50 py-1.5 px-3 rounded-xl ${className}`}>
@@ -107,7 +123,7 @@ function DetailItem({ label, value, isMoney = false, isEnergy = false, noTruncat
     );
 }
 
-function EditableDetailItem({ label, field, value, onChange, type = 'text', isMoney = false, isEnergy = false, isEditing, options, category, meta, noTruncate = false, className = "" }) {
+function EditableDetailItem({ label, field, value, onChange, type = 'text', isMoney = false, isEnergy = false, isEditing, options, category, meta, noTruncate = false, className = "", disabled = false }) {
     // Metadata-driven dropdown with add-new
     if (options && category) {
         return (
@@ -116,22 +132,27 @@ function EditableDetailItem({ label, field, value, onChange, type = 'text', isMo
             </div>
         );
     }
-    if (!isEditing) return <DetailItem label={label} value={value} isMoney={isMoney} isEnergy={isEnergy} noTruncate={noTruncate} className={className} type={type} />;
+    if (!isEditing) return <DetailItem label={label} value={value} isMoney={isMoney} isEnergy={isEnergy} noTruncate={noTruncate} className={className} type={type} options={options} />;
     return (
         <div className={`bg-stone-50 py-1.5 px-3 rounded-xl ${className}`}>
             <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-0.5 font-bold">{label}</p>
             {options ? (
-                <select value={value || ''} onChange={e => onChange(field, e.target.value)}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300">
+                <select value={value || ''} onChange={e => onChange(field, e.target.value)} disabled={disabled}
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50">
                     <option value="">Select...</option>
-                    {options.map(o => <option key={o}>{o}</option>)}
+                    {options.map(o => {
+                        const isObj = typeof o === 'object' && o !== null;
+                        const labelText = isObj ? o.label : o;
+                        const valText = isObj ? o.value : o;
+                        return <option key={valText} value={valText}>{labelText}</option>;
+                    })}
                 </select>
             ) : type === 'textarea' ? (
-                <textarea value={value || ''} onChange={e => onChange(field, e.target.value)} rows={2}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300 resize-none" />
+                <textarea value={value || ''} onChange={e => onChange(field, e.target.value)} rows={2} disabled={disabled}
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300 resize-none disabled:opacity-50" />
             ) : (
-                <input type={type} value={value || ''} onChange={e => onChange(field, e.target.value)}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300" />
+                <input type={type} value={value || ''} onChange={e => onChange(field, e.target.value)} disabled={disabled}
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50" />
             )}
         </div>
     );
@@ -282,7 +303,13 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                 return { ...prev, ...patch };
             });
         } else {
-            setEditData(prev => ({ ...prev, [field]: val }));
+            setEditData(prev => {
+                const updated = { ...prev, [field]: val };
+                if (field === 'project_type') {
+                    updated.financial_tag = "";
+                }
+                return updated;
+            });
         }
     };
 
@@ -419,14 +446,14 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 <div className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
                                     <label className="text-[9px] text-stone-400 font-bold uppercase mb-1.5 block">Financial Tag</label>
                                     <div className="flex flex-wrap gap-1.5">
-                                        {FINANCIAL_TAGS.map(tag => {
-                                            const isActive = editData.financial_tag === tag.id;
-                                            const colors = FINANCIAL_TAG_COLORS[tag.id] || {};
+                                        {getFinancialTags(editData.project_type).map(tagId => {
+                                            const isActive = editData.financial_tag === tagId;
+                                            const colors = FINANCIAL_TAG_COLORS[tagId] || { bg: 'bg-stone-50', text: 'text-stone-700', border: 'border-stone-200', dot: 'bg-stone-400' };
                                             return (
-                                                <button key={tag.id} onClick={() => handleToggleFinancialTag(tag.id)}
+                                                <button key={tagId} onClick={() => handleToggleFinancialTag(tagId)}
                                                     className={`inline-flex items-center gap-1 text-[9px] px-2.5 py-1 rounded-full font-bold border transition-all ${isActive ? `${colors.bg} ${colors.text} ${colors.border}` : 'bg-stone-50 text-stone-400 border-transparent hover:border-stone-200'}`}>
                                                     {isActive && <span className={`w-1 h-1 rounded-full ${colors.dot}`} />}
-                                                    {tag.label}
+                                                    {tagId}
                                                 </button>
                                             );
                                         })}
@@ -503,19 +530,60 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                     {/* ── FINANCE & BANK ── */}
                     {activeTab === 'finance' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {/* Project Type */}
+                                <div className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-1.5 block">Project Type</label>
+                                    <select value={editData.project_type || 'General'} onChange={async (e) => {
+                                        const newType = e.target.value;
+                                        setEditData(prev => ({ ...prev, project_type: newType, financial_tag: "" }));
+                                        await onUpdate(customer.id, { project_type: newType, financial_tag: "" });
+                                        await logActivity(user.id, 'update', `${customer.customer_name}: Project Type changed to ${newType}`, customer.id);
+                                        fetchLogs();
+                                    }} className="w-full p-2.5 bg-white border border-stone-200 rounded-xl font-bold text-stone-700 outline-none">
+                                        <option value="General">General</option>
+                                        <option value="PM SURYA">PM SURYA</option>
+                                    </select>
+                                </div>
+
+                                {/* Financial Tag */}
+                                <div className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-1.5 block">Financial Tag</label>
+                                    <select value={editData.financial_tag || ''} onChange={async (e) => {
+                                        const newTag = e.target.value;
+                                        setEditData(prev => ({ ...prev, financial_tag: newTag }));
+                                        await onUpdate(customer.id, { financial_tag: newTag });
+                                        await logActivity(user.id, 'update', `${customer.customer_name}: Financial Tag updated to ${newTag}`, customer.id);
+                                        fetchLogs();
+                                    }} className="w-full p-2.5 bg-white border border-stone-200 rounded-xl font-bold text-stone-700 outline-none">
+                                        <option value="">Select Tag...</option>
+                                        {getFinancialTags(editData.project_type).map(tag => (
+                                            <option key={tag} value={tag}>{tag}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
                             <section>
                                 <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+
                                     <EditableDetailItem label="Quoted Amt" field="quoted_amount" value={editData.quoted_amount} onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
-                                    <EditableDetailItem label="Quoted Amount with Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Payment Reciept" field="payment_reciept" value={editData.payment_reciept} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Payment Notes" field="payment_notes" value={editData.payment_notes} onChange={handleChange} isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Project Type" field="project_type" value={editData.project_type} onChange={handleChange} options={meta?.['project_type'] || []} category="project_type" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Payment Type" field="payment_type" value={editData.payment_type} onChange={handleChange} options={meta?.['payment_type'] || []} category="payment_type" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem 
+                                        label="Payment Type" 
+                                        field="payment_type" 
+                                        value={editData.payment_type} 
+                                        onChange={handleChange} 
+                                        options={meta?.['payment_type'] || []} 
+                                        category="payment_type" 
+                                        isEditing={editingSection === 'fin'} 
+                                    />
                                     <EditableDetailItem label="Last Transaction Id" field="last_transaction_id" value={editData.last_transaction_id} onChange={handleChange} isEditing={editingSection === 'fin'} />
                                     <EditableDetailItem label="Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
                                     <EditableDetailItem label="Subsidy Claim" field="subsidy_claim" value={editData.subsidy_claim} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
                                     <EditableDetailItem label="Subsidy Received" field="subsidy_received" value={editData.subsidy_received} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Payment Reciept" field="payment_reciept" value={editData.payment_reciept} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Payment Notes" field="payment_notes" value={editData.payment_notes} onChange={handleChange} isEditing={editingSection === 'fin'} />
                                 </div>
                             </section>
                             {/* <section>

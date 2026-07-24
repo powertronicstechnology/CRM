@@ -32,6 +32,7 @@ export default function Dashboard({ user, onLogout }) {
     const [loading, setLoading]             = useState(true);
     const [currentView, setCurrentView]     = useState('dashboard');
     const [selectedStage, setSelectedStage] = useState('Leads');
+    const [financialProjectType, setFinancialProjectType] = useState('General');
     const [stageSearch, setStageSearch]     = useState('');    // per-stage search
     const [globalSearch, setGlobalSearch]   = useState('');    // global search
     const [globalResults, setGlobalResults] = useState([]);
@@ -160,7 +161,8 @@ export default function Dashboard({ user, onLogout }) {
         acc[s.id] = active.filter(c => c.stage === s.id && isAuthorized(c)).length;
         return acc;
     }, {});
-    const financialTagCount = active.filter(c => c.financial_tag && isAuthorized(c)).length;
+    const generalFinCount = active.filter(c => c.financial_tag && !String(c.project_type || 'General').toLowerCase().includes('surya') && isAuthorized(c)).length;
+    const pmSuryaFinCount = active.filter(c => c.financial_tag && String(c.project_type || '').toLowerCase().includes('surya') && isAuthorized(c)).length;
     const trashCount        = trashed.length;
 
     // Per-stage filtered cards
@@ -203,7 +205,7 @@ export default function Dashboard({ user, onLogout }) {
 
     const headerTitle =
         currentView === 'dashboard' ? 'Business Dashboard'
-        : currentView === 'financial' ? 'Financial Tags'
+        : currentView === 'financial' ? `Financial Tags (${financialProjectType === 'General' ? 'General' : 'PM SURYA'})`
         : currentView === 'activity'  ? 'Activity Log'
         : currentView === 'users'     ? 'User Management'
         : currentView === 'trash'     ? 'Trash'
@@ -234,13 +236,27 @@ export default function Dashboard({ user, onLogout }) {
                     {/* Financial */}
                     <div className="mt-4 mb-1">
                         <div className="text-[9px] uppercase font-bold text-stone-300 px-3 pb-2 tracking-widest">Financial</div>
-                        <button onClick={() => { setCurrentView('financial'); setSidebarOpen(false); }}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold mb-0.5 transition-colors ${currentView === 'financial' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'}`}>
+                        
+                        {/* General Tab */}
+                        <button onClick={() => { setCurrentView('financial'); setFinancialProjectType('General'); setSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold mb-1 transition-colors ${currentView === 'financial' && financialProjectType === 'General' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'}`}>
                             <IndianRupee className="w-4 h-4 flex-shrink-0" />
-                            <span className="flex-1 text-left">Financial Tags</span>
-                            {financialTagCount > 0 && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold ${currentView === 'financial' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'}`}>
-                                    {financialTagCount}
+                            <span className="flex-1 text-left">General</span>
+                            {generalFinCount > 0 && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold ${currentView === 'financial' && financialProjectType === 'General' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'}`}>
+                                    {generalFinCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* PM Surya Tab */}
+                        <button onClick={() => { setCurrentView('financial'); setFinancialProjectType('PM SURYA'); setSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold mb-1 transition-colors ${currentView === 'financial' && financialProjectType === 'PM SURYA' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'}`}>
+                            <IndianRupee className="w-4 h-4 flex-shrink-0" />
+                            <span className="flex-1 text-left">PM SURYA</span>
+                            {pmSuryaFinCount > 0 && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold ${currentView === 'financial' && financialProjectType === 'PM SURYA' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'}`}>
+                                    {pmSuryaFinCount}
                                 </span>
                             )}
                         </button>
@@ -286,8 +302,10 @@ export default function Dashboard({ user, onLogout }) {
                     <div className="flex items-center gap-3">
                         <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-stone-500"><Menu className="w-6 h-6" /></button>
                         <h2 className="font-bold text-stone-800">{headerTitle}</h2>
-                        {currentView === 'financial' && financialTagCount > 0 && (
-                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">{financialTagCount} tagged</span>
+                        {currentView === 'financial' && (financialProjectType === 'General' ? generalFinCount : pmSuryaFinCount) > 0 && (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
+                                {financialProjectType === 'General' ? generalFinCount : pmSuryaFinCount} tagged
+                            </span>
                         )}
                     </div>
 
@@ -352,7 +370,7 @@ export default function Dashboard({ user, onLogout }) {
                 {/* View router */}
                 <div className="flex-1 p-4 lg:p-6">
                     {currentView === 'dashboard' && <DashboardView customers={active} loading={loading} />}
-                    {currentView === 'financial' && <FinancialView customers={active} onSelectCustomer={setSelectedCustomer} />}
+                    {currentView === 'financial' && <FinancialView customers={active} onSelectCustomer={setSelectedCustomer} projectType={financialProjectType} />}
                     {currentView === 'activity'  && <ActivityLogView />}
                     {currentView === 'users' && user.userType === 'admin' && <UserManagementView currentUser={user} />}
 

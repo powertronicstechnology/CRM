@@ -25,8 +25,7 @@ export default function CustomerCard({ customer, onSelect, onMoveStage }) {
     const totalPaid = Number(customer.total_received) || 0;
     const quotedAmt = Number(customer.quoted_amount || customer.total_cost || 0);
     const balance = quotedAmt - totalPaid;
-    const tagInfo = FINANCIAL_TAGS.find(f => f.id === customer.financial_tag);
-    const tagColors = customer.financial_tag ? (FINANCIAL_TAG_COLORS[customer.financial_tag] || {}) : {};
+    const tagColors = customer.financial_tag ? (FINANCIAL_TAG_COLORS[customer.financial_tag] || { bg: 'bg-amber-50/50', text: 'text-stone-700', border: 'border-amber-100', dot: 'bg-amber-400' }) : {};
 
     return (
         <div className="bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-amber-400 group flex flex-col">
@@ -127,11 +126,11 @@ export default function CustomerCard({ customer, onSelect, onMoveStage }) {
                 </div>
 
                 {/* Financial tag pill */}
-                {tagInfo && (
+                {customer.financial_tag && (
                     <div className="px-4 pb-3 border-t border-stone-100 pt-2">
                         <span className={`inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase border ${tagColors.bg || 'bg-stone-50'} ${tagColors.text || 'text-stone-500'} ${tagColors.border || 'border-stone-200'}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${tagColors.dot || 'bg-stone-400'}`} />
-                            {tagInfo.label}
+                            {customer.financial_tag}
                         </span>
                     </div>
                 )}

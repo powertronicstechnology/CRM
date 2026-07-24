@@ -19,8 +19,7 @@ function formatDate(d) {
 }
 
 function TrashDetailDrawer({ customer, onClose }) {
-    const tagColors = customer.financial_tag ? (FINANCIAL_TAG_COLORS[customer.financial_tag] || {}) : {};
-    const tagInfo = FINANCIAL_TAGS.find(f => f.id === customer.financial_tag);
+    const tagColors = customer.financial_tag ? (FINANCIAL_TAG_COLORS[customer.financial_tag] || { bg: 'bg-amber-50/50', text: 'text-stone-700', border: 'border-amber-100', dot: 'bg-amber-400' }) : {};
     return (
         <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-lg overflow-hidden border border-stone-100">
@@ -53,11 +52,11 @@ function TrashDetailDrawer({ customer, onClose }) {
                             <span className="text-stone-700 font-medium text-right break-words max-w-[70%]">{val}</span>
                         </div>
                     ) : null)}
-                    {tagInfo && (
+                    {customer.financial_tag && (
                         <div className="pt-2 border-t border-stone-100">
                             <span className={`inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase border ${tagColors.bg || 'bg-stone-50'} ${tagColors.text || 'text-stone-500'} ${tagColors.border || 'border-stone-200'}`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${tagColors.dot || 'bg-stone-400'}`} />
-                                {tagInfo.label}
+                                {customer.financial_tag}
                             </span>
                         </div>
                     )}

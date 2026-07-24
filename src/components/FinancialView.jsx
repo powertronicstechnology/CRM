@@ -3,10 +3,23 @@ import { Tag } from 'lucide-react';
 import { FINANCIAL_TAGS, FINANCIAL_TAG_COLORS } from '../constants';
 import { formatIndianCurrency } from '../utils';
 
-export default function FinancialView({ customers, onSelectCustomer }) {
+const GENERAL_TAGS_LIST = ["Initial", "Installation", "Final payment"];
+const PM_SURYA_TAGS_LIST = ["Registration payment 20k", "Installation payment", "Quotation amount", "Final payment after meter installation"];
+
+export default function FinancialView({ customers, onSelectCustomer, projectType = 'General' }) {
     const [activeFilter, setActiveFilter] = useState(null);
 
-    const tagged = customers.filter(c => c.financial_tag);
+    const isSuryaFilter = projectType.toLowerCase().includes('surya');
+    const activeTagsList = isSuryaFilter ? PM_SURYA_TAGS_LIST : GENERAL_TAGS_LIST;
+    const projectTags = FINANCIAL_TAGS.filter(t => activeTagsList.includes(t.id));
+
+    const tagged = customers.filter(c => {
+        if (!c.financial_tag) return false;
+        if (c.deleted_at) return false;
+        const cType = c.project_type || 'General';
+        const isCustomerSurya = cType.toLowerCase().includes('surya');
+        return isCustomerSurya === isSuryaFilter;
+    });
 
     const totals = tagged.reduce((acc, c) => {
         const quotedVal = Number(c.quoted_amount || c.total_cost || 0);
@@ -16,7 +29,7 @@ export default function FinancialView({ customers, onSelectCustomer }) {
         return acc;
     }, { quoted: 0, received: 0, receivable: 0 });
 
-    const grouped = FINANCIAL_TAGS.reduce((acc, tag) => {
+    const grouped = projectTags.reduce((acc, tag) => {
         const group = tagged.filter(c => c.financial_tag === tag.id);
         if (group.length > 0) acc[tag.id] = group;
         return acc;
@@ -25,7 +38,7 @@ export default function FinancialView({ customers, onSelectCustomer }) {
     if (tagged.length === 0) return (
         <div className="flex flex-col items-center justify-center h-64 text-stone-400">
             <Tag className="w-10 h-10 mb-3 text-stone-300" />
-            <p className="font-medium text-stone-500 text-sm">No financial tags active</p>
+            <p className="font-medium text-stone-500 text-sm">No financial tags active for {projectType}</p>
         </div>
     );
 
@@ -54,7 +67,7 @@ export default function FinancialView({ customers, onSelectCustomer }) {
                     <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">All Tagged</p>
                     <p className="text-2xl font-bold">{tagged.length}</p>
                 </button>
-                {FINANCIAL_TAGS.map(tag => {
+                {projectTags.map(tag => {
                     const groupCount = (grouped[tag.id] || []).length;
                     if (groupCount === 0) return null;
                     const colors = FINANCIAL_TAG_COLORS[tag.id] || {};
@@ -70,7 +83,7 @@ export default function FinancialView({ customers, onSelectCustomer }) {
             </div>
 
             {/* Grouped listing */}
-            {FINANCIAL_TAGS.filter(tag => !activeFilter || activeFilter === tag.id).map(tag => {
+            {projectTags.filter(tag => !activeFilter || activeFilter === tag.id).map(tag => {
                 const group = grouped[tag.id];
                 if (!group) return null;
                 const colors = FINANCIAL_TAG_COLORS[tag.id] || {};
