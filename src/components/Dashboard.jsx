@@ -83,7 +83,7 @@ export default function Dashboard({ user, onLogout }) {
         const q = globalSearch.trim().toLowerCase();
         if (!q) { setGlobalResults([]); setShowGlobalDrop(false); return; }
         const active = customers.filter(c => !c.deleted_at);
-        const authorized = user.userType === 'admin'
+        const authorized = (user.userType === 'admin' || user.userType === 'sales')
             ? active
             : active.filter(c => c.poc === user.name);
         const results = authorized.filter(c =>
@@ -161,7 +161,7 @@ export default function Dashboard({ user, onLogout }) {
     // ── Derived data (active = non-deleted only) ───────────────────────────────
     const active      = customers.filter(c => !c.deleted_at);
     const trashed     = customers.filter(c => !!c.deleted_at);
-    const isAuthorized = (c) => user.userType === 'admin' || c.poc === user.name;
+    const isAuthorized = (c) => user.userType === 'admin' || user.userType === 'sales' || c.poc === user.name;
 
     // Helper to get year from Customer: Checks crn for year ranges (e.g. 26-27 -> 2026, 27-28 -> 2027), falling back to date field or created_at
     const getYearFromCustomer = (c) => {
@@ -241,7 +241,6 @@ export default function Dashboard({ user, onLogout }) {
 
     // ── Role-based routing ────────────────────────────────────────────────────
     if (user.userType === 'agent') return <AgentForm user={user} onLogout={onLogout} />;
-    if (user.userType === 'sales') return <SalesView customers={active} loading={loading} user={user} onUpdate={handleMoveStage} />;
 
     const headerTitle =
         currentView === 'dashboard' ? 'Business Dashboard'
@@ -390,7 +389,7 @@ export default function Dashboard({ user, onLogout }) {
                             </div>
                         )}
 
-                        {user.userType === 'admin' && (
+                        {(user.userType === 'admin' || user.userType === 'sales') && (
                             <>
                                 <button onClick={() => exportAllToCSV(filteredActive)}
                                     className="flex items-center gap-1.5 border border-stone-200 text-stone-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-stone-50 transition-colors">
