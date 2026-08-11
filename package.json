@@ -1,9 +1,9 @@
 {
-  "name": "Powertronics",
+  "name": "CRM",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://sadaf953.github.io/Powertronics/",
+  "homepage": "https://powertronicstechnology.github.io/CRM/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
