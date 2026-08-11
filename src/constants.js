@@ -40,10 +40,6 @@ export const FINANCIAL_TAGS = [
     { id: 'Quotation amount',                          label: 'Quotation amount',                          icon: IndianRupee },
     { id: 'Final payment after meter installation',   label: 'Final payment after meter installation',   icon: IndianRupee },
 
-    // Legacy fallback options
-    { id: 'Payment Pending',                           label: 'Payment Pending',                           icon: IndianRupee },
-    { id: 'Subsidy Pending',                           label: 'Subsidy Pending',                           icon: Banknote },
-    { id: 'Loan Pending',                              label: 'Loan Pending',                              icon: CreditCard },
 ];
 
 export const FINANCIAL_TAG_COLORS = {
@@ -55,10 +51,6 @@ export const FINANCIAL_TAG_COLORS = {
     'Installation payment':                    { bg: 'bg-purple-50',   text: 'text-purple-700',   border: 'border-purple-200',   dot: 'bg-purple-400' },
     'Quotation amount':                        { bg: 'bg-indigo-50',   text: 'text-indigo-700',   border: 'border-indigo-200',   dot: 'bg-indigo-400' },
     'Final payment after meter installation':  { bg: 'bg-emerald-50',  text: 'text-emerald-700',  border: 'border-emerald-200',  dot: 'bg-emerald-400' },
-
-    'Payment Pending':                         { bg: 'bg-red-50',      text: 'text-red-700',      border: 'border-red-200',      dot: 'bg-red-400' },
-    'Subsidy Pending':                         { bg: 'bg-amber-50',    text: 'text-amber-700',    border: 'border-amber-200',    dot: 'bg-amber-400' },
-    'Loan Pending':                            { bg: 'bg-orange-50',   text: 'text-orange-700',   border: 'border-orange-200',   dot: 'bg-orange-400' },
 };
 
 // Supabase metadata table categories (one per managed dropdown)
