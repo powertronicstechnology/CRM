@@ -5,28 +5,63 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { logActivity, formatDate } from '../utils';
-import { USER_TYPE_OPTIONS, ROLE_OPTIONS } from '../constants';
-import { ShieldCheck, Plus, RefreshCw, AlertTriangle, Eye, EyeOff, UserCog, X } from 'lucide-react';
+import { logActivity } from '../utils';
+import { APP_ROLES } from '../constants';
+import { ShieldCheck, Plus, RefreshCw, AlertTriangle, Eye, EyeOff, UserCog, X, KeyRound, Ban, Search } from 'lucide-react';
 
 // ─── CreateUserModal ──────────────────────────────────────────────────────────
 function CreateUserModal({ onClose, onCreated, currentUser }) {
-    const [form, setForm] = useState({ name: '', email: '', password: '', role: 'Sales Executive', user_type: 'sales' });
+    const [form, setForm] = useState({ name: '', email: '', password: '', role: 'Office', user_type: 'sales' });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [showPw, setShowPw] = useState(false);
     const set = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
 
     const handleCreate = async () => {
-        if (!form.name.trim() || !form.email.trim() || !form.password.trim()) { setError('Name, email, and password are required.'); return; }
-        if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+        if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+            setError('Name, email, and password are required.');
+            return;
+        }
+
+        if (form.password.length < 8) {
+            setError('Password must be at least 8 characters.');
+            return;
+        }
+
         setSaving(true);
         setError('');
+
         try {
-            const response = await supabase.functions.invoke('smooth-worker', { body: form });
-            if (response.error) throw new Error(response.error.message || JSON.stringify(response.error));
-            if (response.data?.error) throw new Error(response.data.error);
-            logActivity(currentUser.id, 'create', `Created new user: ${form.name}`, `${form.role} (${form.user_type})`);
+            const response = await supabase.functions.invoke('add_user', {
+                body: { ...form, action: 'create' },
+            });
+
+            if (response.error) {
+                let message = response.error.message;
+
+                try {
+                    const body = await response.error.context?.json();
+                    if (body?.error) {
+                        message = body.error;
+                    }
+                } catch (_) {
+                    // Ignore if the error body can't be parsed
+                }
+
+                throw new Error(message);
+            }
+
+            if (response.data?.error) {
+                throw new Error(response.data.error);
+            }
+
+            logActivity(
+                currentUser.id,
+                'create',
+                `Created new user: ${form.name}`,
+                `${form.role} (${form.user_type})`
+            );
+
             onCreated();
         } catch (err) {
             setError(err.message || 'Failed to create user.');
@@ -34,7 +69,6 @@ function CreateUserModal({ onClose, onCreated, currentUser }) {
             setSaving(false);
         }
     };
-
     return (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
             <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden flex flex-col">
@@ -70,21 +104,23 @@ function CreateUserModal({ onClose, onCreated, currentUser }) {
                             </button>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs font-medium text-stone-600 mb-1">Access Type</label>
-                            <select value={form.user_type} onChange={e => set('user_type', e.target.value)}
-                                className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
-                                {USER_TYPE_OPTIONS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-stone-600 mb-1">Role</label>
-                            <select value={form.role} onChange={e => set('role', e.target.value)}
-                                className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
-                                {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                        </div>
+                    <div>
+                        <label className="block text-xs font-medium text-stone-600 mb-1">Role *</label>
+                        <select
+                            value={APP_ROLES.find(r => r.user_type === form.user_type)?.id || 'office'}
+                            onChange={e => {
+                                const val = e.target.value;
+                                const selected = APP_ROLES.find(r => r.id === val);
+                                setForm(prev => ({
+                                    ...prev,
+                                    user_type: selected.user_type,
+                                    role: selected.role
+                                }));
+                            }}
+                            className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
+                        >
+                            {APP_ROLES.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+                        </select>
                     </div>
                 </div>
                 <div className="border-t p-4 flex gap-3">
@@ -105,11 +141,23 @@ export default function UserManagementView({ currentUser }) {
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [actionLoading, setActionLoading] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [toast, setToast] = useState(null); // { type: 'success' | 'error', message }
+
+    const filteredProfiles = profiles.filter(p => {
+        const q = searchQuery.toLowerCase();
+        return !searchQuery || p.name?.toLowerCase().includes(q) || p.email?.toLowerCase().includes(q);
+    });
+
+    const showToast = (type, message) => {
+        setToast({ type, message });
+        setTimeout(() => setToast(null), 4000);
+    };
 
     const fetchProfiles = async () => {
         setLoading(true);
         const { data, error } = await supabase.from('profiles')
-            .select('*').eq('status', 'active').order('created_at', { ascending: false });
+            .select('*').order('created_at', { ascending: false });
         if (!error) setProfiles(data || []);
         setLoading(false);
     };
@@ -126,27 +174,116 @@ export default function UserManagementView({ currentUser }) {
         setActionLoading(null);
     };
 
-    const handleResetPassword = async (email) => {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-        if (!error) alert(`Password reset email sent to ${email}`);
-        else alert(`Error: ${error.message}`);
+    const handleResetPassword = async (email, name) => {
+        setActionLoading(email);
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: 'https://watersun9.github.io/CRM/',
+            });
+            if (error) throw error;
+            showToast('success', `Password reset email sent to ${name}`);
+            logActivity(currentUser.id, 'update', `Sent password reset to ${name}`, email);
+        } catch (err) {
+            showToast('error', `Failed: ${err.message}`);
+        } finally {
+            setActionLoading(null);
+        }
     };
 
-    const deactivateUser = async (userId) => {
+
+
+    const deactivateUser = async (userId, name) => {
+        if (!confirm(`Deactivate ${name}? They will no longer be able to log in, but their record stays.`)) return;
+
+        setActionLoading(userId);
         try {
-            const response = await fetch(
-                'https://vpsuvtopsyuafbrjyinr.supabase.co/functions/v1/smooth-worker',
-                {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
-                    body: JSON.stringify({ user_id: userId }),
-                }
-            );
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error);
-            setProfiles(profiles.filter(p => p.id !== userId));
+            const response = await supabase.functions.invoke('add_user', {
+                body: { action: 'deactivate', user_id: userId },
+            });
+
+            if (response.error) {
+                let message = response.error.message;
+                try {
+                    const body = await response.error.context?.json();
+                    if (body?.error) message = body.error;
+                } catch (_) { }
+                throw new Error(message);
+            }
+
+            if (response.data?.error) {
+                throw new Error(response.data.error);
+            }
+
+            setProfiles(prev => prev.map(p => p.id === userId ? { ...p, status: 'inactive' } : p));
+            showToast('success', `${name} has been deactivated`);
+            logActivity(currentUser.id, 'update', `Deactivated user: ${name}`, '');
         } catch (err) {
-            console.error('Error deactivating user:', err.message);
+            showToast('error', `Failed to deactivate: ${err.message}`);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const reactivateUser = async (userId, name) => {
+        setActionLoading(userId);
+        try {
+            const response = await supabase.functions.invoke('add_user', {
+                body: { action: 'reactivate', user_id: userId },
+            });
+
+            if (response.error) {
+                let message = response.error.message;
+                try {
+                    const body = await response.error.context?.json();
+                    if (body?.error) message = body.error;
+                } catch (_) { }
+                throw new Error(message);
+            }
+
+            if (response.data?.error) {
+                throw new Error(response.data.error);
+            }
+
+            setProfiles(prev => prev.map(p => p.id === userId ? { ...p, status: 'active' } : p));
+            showToast('success', `${name} has been reactivated`);
+            logActivity(currentUser.id, 'update', `Reactivated user: ${name}`, '');
+        } catch (err) {
+            showToast('error', `Failed to reactivate: ${err.message}`);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const deleteUser = async (userId, name) => {
+        if (!confirm(`⚠️ PERMANENTLY DELETE ${name}? This cannot be undone. Their account and profile will be completely removed.`)) return;
+        if (!confirm(`Are you absolutely sure? Type-to-confirm: Delete ${name} forever?`)) return;
+
+        setActionLoading(userId);
+        try {
+            const response = await supabase.functions.invoke('add_user', {
+                body: { action: 'delete', user_id: userId },
+            });
+
+            if (response.error) {
+                let message = response.error.message;
+                try {
+                    const body = await response.error.context?.json();
+                    if (body?.error) message = body.error;
+                } catch (_) { }
+                throw new Error(message);
+            }
+
+            if (response.data?.error) {
+                throw new Error(response.data.error);
+            }
+
+            setProfiles(prev => prev.filter(p => p.id !== userId));
+            showToast('success', `${name} has been permanently deleted`);
+            logActivity(currentUser.id, 'delete', `Permanently deleted user: ${name}`, '');
+        } catch (err) {
+            showToast('error', `Failed to delete: ${err.message}`);
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -158,10 +295,20 @@ export default function UserManagementView({ currentUser }) {
 
     return (
         <div className="max-w-4xl mx-auto space-y-4">
+            {/* Toast notification */}
+            {toast && (
+                <div className={`fixed top-4 right-4 z-[100] px-4 py-3 rounded-xl shadow-lg border text-sm font-medium flex items-center gap-2 animate-in slide-in-from-right transition-all ${toast.type === 'success'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        : 'bg-red-50 border-red-200 text-red-700'
+                    }`}>
+                    {toast.type === 'success' ? '✓' : '✕'} {toast.message}
+                </div>
+            )}
+
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-stone-400" />
-                    <p className="text-sm text-stone-500">{profiles.length} users registered</p>
+                    <p className="text-sm text-stone-500">{filteredProfiles.length} of {profiles.length} users</p>
                 </div>
                 <div className="flex gap-2">
                     <button onClick={fetchProfiles} className="p-2 border border-stone-200 rounded-xl text-stone-500 hover:bg-stone-50 transition-colors">
@@ -175,69 +322,139 @@ export default function UserManagementView({ currentUser }) {
             </div>
 
             <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
+                {/* Search */}
+                <div className="relative border-b border-stone-100 p-4">
+                    <Search className="absolute left-7 top-6 w-4 h-4 text-stone-400" />
+                    <input
+                        type="text"
+                        placeholder="Search users by name or email..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 placeholder:text-stone-400"
+                    />
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-stone-100 bg-stone-50">
                                 <th className="text-left px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">User</th>
-                                <th className="text-left px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">Access Type</th>
                                 <th className="text-left px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">Role</th>
+                                <th className="text-left px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">Status</th>
                                 <th className="text-left px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">Joined</th>
-                                <th className="px-4 py-3" />
+                                <th className="text-right px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-50">
-                            {profiles.map(profile => (
-                                <tr key={profile.id} className="hover:bg-stone-50 transition-colors">
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-stone-900 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                                {profile.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
+                            {filteredProfiles.map(profile => {
+                                const isInactive = profile.status === 'inactive';
+                                const isYou = profile.id === currentUser.id;
+                                return (
+                                    <tr key={profile.id} className={`transition-colors ${isInactive ? 'bg-stone-50/50 opacity-60' : 'hover:bg-stone-50'}`}>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${isInactive ? 'bg-stone-400' : 'bg-stone-900'}`}>
+                                                    {profile.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
+                                                </div>
+                                                <div>
+                                                    <p className={`font-semibold ${isInactive ? 'text-stone-400' : 'text-stone-800'}`}>{profile.name || 'Unnamed'}</p>
+                                                    <p className="text-xs text-stone-400">{profile.email || '–'}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-semibold text-stone-800">{profile.name || 'Unnamed'}</p>
-                                                <p className="text-xs text-stone-400">{profile.email || '–'}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <select value={profile.user_type || ''} disabled={profile.id === currentUser.id || actionLoading === profile.id}
-                                            onChange={e => handleUpdateRole(profile.id, 'user_type', e.target.value)}
-                                            className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 focus:outline-none disabled:opacity-50 bg-white">
-                                            {USER_TYPE_OPTIONS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-                                        </select>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <select value={profile.role || ''} disabled={actionLoading === profile.id}
-                                            onChange={e => handleUpdateRole(profile.id, 'role', e.target.value)}
-                                            className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 focus:outline-none disabled:opacity-50 bg-white">
-                                            <option value="">Select role...</option>
-                                            {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                                        </select>
-                                    </td>
-                                    <td className="px-4 py-3 text-xs text-stone-500">
-                                        {formatDate(profile.created_at)}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-1 justify-end">
-                                            {profile.id !== currentUser.id ? (
-                                                <>
-                                                    <button onClick={() => handleResetPassword(profile.email)} title="Send password reset"
-                                                        className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                        <RefreshCw className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button onClick={() => deactivateUser(profile.id)}
-                                                        className="px-3 py-1.5 text-xs text-stone-700 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-colors font-medium">
-                                                        Deactivate
-                                                    </button>
-                                                </>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {isYou || isInactive ? (
+                                                <span className="text-xs font-semibold text-stone-600">
+                                                    {APP_ROLES.find(r => r.user_type === profile.user_type)?.label || profile.role || 'Admin'}
+                                                </span>
                                             ) : (
-                                                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">You</span>
+                                                <select
+                                                    value={APP_ROLES.find(r => r.user_type === profile.user_type)?.id || 'office'}
+                                                    disabled={actionLoading === profile.id}
+                                                    onChange={async (e) => {
+                                                        const val = e.target.value;
+                                                        const selected = APP_ROLES.find(r => r.id === val);
+                                                        setActionLoading(profile.id);
+                                                        const { error } = await supabase.from('profiles').update({
+                                                            user_type: selected.user_type,
+                                                            role: selected.role
+                                                        }).eq('id', profile.id);
+                                                        if (!error) {
+                                                            setProfiles(prev => prev.map(p => p.id === profile.id ? { ...p, user_type: selected.user_type, role: selected.role } : p));
+                                                            logActivity(currentUser.id, 'update', `Updated role for ${profile.name} to ${selected.label}`, '');
+                                                        }
+                                                        setActionLoading(null);
+                                                    }}
+                                                    className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 focus:outline-none disabled:opacity-50 bg-white"
+                                                >
+                                                    {APP_ROLES.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+                                                </select>
                                             )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {isInactive ? (
+                                                <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">Inactive</span>
+                                            ) : (
+                                                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">Active</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-xs text-stone-500">
+                                            {profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-IN') : '–'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-1 justify-end flex-wrap">
+                                                {isYou ? (
+                                                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">You</span>
+                                                ) : isInactive ? (
+                                                    /* ── Inactive user actions ── */
+                                                    <>
+                                                        <button
+                                                            onClick={() => reactivateUser(profile.id, profile.name)}
+                                                            disabled={actionLoading === profile.id}
+                                                            title="Reactivate this user"
+                                                            className="flex items-center gap-1 px-2 py-1.5 text-xs text-stone-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors font-medium disabled:opacity-50"
+                                                        >
+                                                            <RefreshCw className="w-3.5 h-3.5" />
+                                                            <span className="hidden sm:inline">Reactivate</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteUser(profile.id, profile.name)}
+                                                            disabled={actionLoading === profile.id}
+                                                            title="Permanently delete this user"
+                                                            className="flex items-center gap-1 px-2 py-1.5 text-xs text-stone-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors font-medium disabled:opacity-50"
+                                                        >
+                                                            <X className="w-3.5 h-3.5" />
+                                                            <span className="hidden sm:inline">Delete</span>
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    /* ── Active user actions ── */
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleResetPassword(profile.email, profile.name)}
+                                                            disabled={actionLoading === profile.email}
+                                                            title="Send password reset email"
+                                                            className="flex items-center gap-1 px-2 py-1.5 text-xs text-stone-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors font-medium disabled:opacity-50"
+                                                        >
+                                                            <KeyRound className="w-3.5 h-3.5" />
+                                                            <span className="hidden sm:inline">Reset Pwd</span>
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => deactivateUser(profile.id, profile.name)}
+                                                            disabled={actionLoading === profile.id}
+                                                            title="Deactivate this user"
+                                                            className="flex items-center gap-1 px-2 py-1.5 text-xs text-stone-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-colors font-medium disabled:opacity-50"
+                                                        >
+                                                            <Ban className="w-3.5 h-3.5" />
+                                                            <span className="hidden sm:inline">Deactivate</span>
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
