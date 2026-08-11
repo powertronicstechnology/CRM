@@ -62,7 +62,7 @@ export const FINANCIAL_TAG_COLORS = {
 };
 
 // Supabase metadata table categories (one per managed dropdown)
-export const META_CATEGORIES = ['panel', 'inverter', 'meter_phase', 'file_given_to_customer', 'meter_file_submission', 'meter_instaled', 'panel_and_inverter', 'fabrication_and_wiring', 'subsidy_approval_status', 'project_type', 'payment_type'];
+export const META_CATEGORIES = ['panel', 'inverter', 'meter_phase', 'file_given_to_customer', 'meter_file_submission', 'meter_instaled', 'panel_and_inverter', 'fabrication_and_wiring', 'subsidy_approval_status', 'project_type', 'payment_type', 'date'];
 
 export const USER_TYPE_OPTIONS = ['admin', 'sales', 'agent'];
 export const ROLE_OPTIONS      = ['Manager', 'Sales Executive', 'Field Agent', 'Operations', 'Finance'];

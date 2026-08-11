@@ -23,7 +23,7 @@ export default function AddLeadModal({ onClose, onSave }) {
 
     const handleSave = async () => {
         if (!form.customer_name || !form.customer_name.trim()) { setError('Customer name is required'); return; }
-        if (!form.phone_number || !form.phone_number.trim())   { setError('Phone number is required'); return; }
+        if (!form.phone_number || !form.phone_number.trim()) { setError('Phone number is required'); return; }
         setSaving(true);
         setError('');
         try {
@@ -31,7 +31,7 @@ export default function AddLeadModal({ onClose, onSave }) {
                 ...form,
                 quoted_amount: form.quoted_amount ? Number(form.quoted_amount) : null,
                 total_cost: form.quoted_amount ? Number(form.quoted_amount) : null,
-                system_capacity_kwp:  form.system_capacity_kwp  ? Number(form.system_capacity_kwp)  : null,
+                system_capacity_kwp: form.system_capacity_kwp ? Number(form.system_capacity_kwp) : null,
                 payments: [],
                 follow_ups: [],
                 project_checklist: DEFAULT_PROJECT_CHECKLIST,
@@ -64,7 +64,7 @@ export default function AddLeadModal({ onClose, onSave }) {
 
                     <div>
                         <label className="block text-xs font-semibold text-stone-600 mb-1">Phone Number *</label>
-                        <input type="tel" value={form.phone_number} 
+                        <input type="tel" value={form.phone_number}
                             onChange={e => set('phone_number', e.target.value.replace(/[^0-9+\s-]/g, ''))}
                             className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" placeholder="e.g. +91 9876543210" />
                     </div>

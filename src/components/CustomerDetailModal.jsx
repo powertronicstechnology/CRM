@@ -579,6 +579,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                         isEditing={editingSection === 'fin'} 
                                     />
                                     <EditableDetailItem label="Last Transaction Id" field="last_transaction_id" value={editData.last_transaction_id} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Date" field="date" value={editData.date} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
                                     <EditableDetailItem label="Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
                                     <EditableDetailItem label="Subsidy Claim" field="subsidy_claim" value={editData.subsidy_claim} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
                                     <EditableDetailItem label="Subsidy Received" field="subsidy_received" value={editData.subsidy_received} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />

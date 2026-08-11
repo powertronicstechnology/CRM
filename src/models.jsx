@@ -94,5 +94,6 @@ export const DEFAULT_LEAD_FORM = {
     fabrication_and_wiring: '',
     quoted_amount: '',
     quoted_amount_2: '',
+    date: '',
     stage: 'REGISTRATION PENDING',
 };
