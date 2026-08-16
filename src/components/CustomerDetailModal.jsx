@@ -1,28 +1,30 @@
 // ─── CustomerDetailModal.jsx ──────────────────────────────────────────────────
 // Full customer detail: 4-tab layout (Overview, Finance & Bank, Checklist,
-// Notes & History). Section-level editing, payments array editor, generic
-// history entry editor, financial tag toggle, and system activity timeline.
-//
-// CLIENT CUSTOMISATION:
-//   • Sections and fields: edit the <section> blocks in the Overview/Finance tabs
-//   • Checklist template: edit DEFAULT_PROJECT_CHECKLIST in models.jsx
-//   • Stage/tag options: edit constants.js
+// Notes & History). Section-level editing, sequential payments manager,
+// subsidy status tags, centralized comments, and system activity timeline.
 // ──────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react';
 import {
     X, Edit3, Trash2, Save, Send, AlertTriangle, CheckSquare,
-    User, Zap, IndianRupee, Building2, FolderOpen, MapPin,
-    LayoutDashboard, History, Plus, ShieldCheck, Banknote,
+    User, Zap, IndianRupee,
+    LayoutDashboard, History, Plus, ShieldCheck, Banknote, MessageSquare,
+    CreditCard, CheckCircle2,
 } from 'lucide-react';
-import { PRIMARY_STAGES, FINANCIAL_TAGS, FINANCIAL_TAG_COLORS } from '../constants';
+import { PRIMARY_STAGES } from '../constants';
 import { normalizeChecklist } from '../models';
 import { logActivity, formatLogDate, formatDate } from '../utils';
 import { supabase } from '../supabase';
-import HistoryEntryEditor from './HistoryEntryEditor';
 
 const GENERAL_TAGS = ["Initial", "Installation", "Final payment"];
-const PM_SURYA_TAGS = ["Registration payment 20k", "Installation payment", "Quotation amount", "Final payment after meter installation"];
+const PM_SURYA_TAGS = [
+    "Registration payment 20k",
+    "Installation payment",
+    "Quotation amount",
+    "Final payment after meter installation"
+];
+
+const DEFAULT_PAYMENT_METHODS = ["ONL", "CHQ", "DD", "CASH"];
 
 function getFinancialTags(projectType) {
     if (!projectType) return GENERAL_TAGS;
@@ -36,12 +38,51 @@ function getFinancialTags(projectType) {
 // ─── formatMoney: Indian comma system (₹1,00,000) ────────────────────────────
 function fmt(val) {
     const n = Number(val);
-    if (!val || isNaN(n)) return '–';
+    if (!val || isNaN(n)) return '₹0';
     return '₹' + n.toLocaleString('en-IN');
 }
 
+const getTodayDateString = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+};
+
+const formatInputRupee = (val) => {
+    if (val === undefined || val === null || val === '') return '';
+    const numString = String(val).replace(/[^0-9]/g, '');
+    if (!numString) return '';
+    const num = Number(numString);
+    return num.toLocaleString('en-IN');
+};
+
+const parseInputRupee = (val) => {
+    if (!val) return '';
+    return val.replace(/,/g, '');
+};
+
+const getInitialPayments = (cust) => {
+    if (Array.isArray(cust.payments) && cust.payments.length > 0) {
+        return cust.payments;
+    }
+    const list = [];
+    for (let k = 1; k <= 5; k++) {
+        const amt = cust[`payment_${k}`];
+        if (amt !== undefined && amt !== null && amt !== '') {
+            list.push({
+                no: k,
+                amount: amt,
+                remark: cust[`payment_remark_${k}`] || 'ONL',
+                date: cust[`payment_date_${k}`] || cust.date || getTodayDateString()
+            });
+        }
+    }
+    return list;
+};
+
 // ─── MetaSelect: dropdown that lets the user type+add a new option ───────────
-// Adds the new value to the Supabase metadata table automatically.
 function MetaSelect({ label, field, value, onChange, category, options = [], isEditing }) {
     const [adding, setAdding] = useState(false);
     const [newVal, setNewVal] = useState('');
@@ -52,7 +93,6 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
     const handleAdd = async () => {
         const trimmed = newVal.trim();
         if (!trimmed) return;
-        // Persist to Supabase metadata table
         await supabase.from('metadata').insert({ category, label: trimmed });
         setLocalOptions(prev => [...prev, trimmed]);
         onChange(field, trimmed);
@@ -63,7 +103,7 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
     if (!isEditing) {
         return (
             <div className="bg-stone-50 py-1.5 px-3 rounded-xl">
-                <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-0.5 font-bold">{label}</p>
+                <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
                 <p className="text-sm font-semibold truncate text-stone-800">{value || '–'}</p>
             </div>
         );
@@ -71,15 +111,15 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
 
     if (adding) {
         return (
-            <div className="bg-stone-50 py-1.5 px-3 rounded-xl space-y-1.5">
-                <p className="text-[9px] text-stone-400 uppercase tracking-wide font-bold">{label} — New</p>
+            <div className="bg-stone-50 py-1.5 px-3 rounded-xl space-y-1">
+                <p className="text-[10px] text-stone-400 uppercase tracking-wider font-bold">{label} — New</p>
                 <div className="flex gap-1">
                     <input autoFocus value={newVal} onChange={e => setNewVal(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAdd()}
                         placeholder={`New ${label}...`}
-                        className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300" />
-                    <button onClick={handleAdd} className="px-2 py-0.5 bg-amber-500 text-white rounded-lg text-xs font-bold">Add</button>
-                    <button onClick={() => setAdding(false)} className="px-2 py-0.5 bg-stone-200 text-stone-600 rounded-lg text-xs">✕</button>
+                        className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300" />
+                    <button onClick={handleAdd} className="px-3 py-1 bg-amber-500 text-white rounded-lg text-xs font-bold">Add</button>
+                    <button onClick={() => setAdding(false)} className="px-3 py-1 bg-stone-200 text-stone-600 rounded-lg text-xs">✕</button>
                 </div>
             </div>
         );
@@ -87,16 +127,16 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
 
     return (
         <div className="bg-stone-50 py-1.5 px-3 rounded-xl">
-            <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-0.5 font-bold">{label}</p>
+            <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
             <div className="flex gap-1">
                 <select value={value || ''} onChange={e => onChange(field, e.target.value)}
-                    className="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300">
+                    className="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300">
                     <option value="">Select...</option>
                     {localOptions.map(o => <option key={o}>{o}</option>)}
                 </select>
                 <button onClick={() => setAdding(true)} title="Add new option"
-                    className="px-1.5 py-0.5 bg-stone-100 hover:bg-amber-50 hover:text-amber-600 text-stone-400 rounded-lg text-xs transition-colors">
-                    <Plus className="w-3 h-3" />
+                    className="px-2 py-1 bg-stone-100 hover:bg-amber-50 hover:text-amber-600 text-stone-400 rounded-lg text-xs transition-colors flex items-center justify-center">
+                    <Plus className="w-3.5 h-3.5" />
                 </button>
             </div>
         </div>
@@ -114,8 +154,8 @@ function DetailItem({ label, value, isMoney = false, isEnergy = false, noTruncat
         if (found) displayVal = found.label;
     }
     return (
-        <div className={`bg-stone-50 py-1.5 px-3 rounded-xl ${className}`}>
-            <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-0.5 font-bold">{label}</p>
+        <div className={`bg-stone-50 py-2 px-3.5 rounded-xl ${className}`}>
+            <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
             <p className={`text-sm font-semibold ${noTruncate ? 'break-words whitespace-pre-wrap' : 'truncate'} ${isMoney ? 'text-emerald-600' : isEnergy ? 'text-amber-600' : 'text-stone-800'}`}>
                 {isMoney ? fmt(value) : displayVal}
             </p>
@@ -124,7 +164,6 @@ function DetailItem({ label, value, isMoney = false, isEnergy = false, noTruncat
 }
 
 function EditableDetailItem({ label, field, value, onChange, type = 'text', isMoney = false, isEnergy = false, isEditing, options, category, meta, noTruncate = false, className = "", disabled = false }) {
-    // Metadata-driven dropdown with add-new
     if (options && category) {
         return (
             <div className={className}>
@@ -135,10 +174,10 @@ function EditableDetailItem({ label, field, value, onChange, type = 'text', isMo
     if (!isEditing) return <DetailItem label={label} value={value} isMoney={isMoney} isEnergy={isEnergy} noTruncate={noTruncate} className={className} type={type} options={options} />;
     return (
         <div className={`bg-stone-50 py-1.5 px-3 rounded-xl ${className}`}>
-            <p className="text-[9px] text-stone-400 uppercase tracking-wide mb-0.5 font-bold">{label}</p>
+            <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
             {options ? (
                 <select value={value || ''} onChange={e => onChange(field, e.target.value)} disabled={disabled}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50">
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50">
                     <option value="">Select...</option>
                     {options.map(o => {
                         const isObj = typeof o === 'object' && o !== null;
@@ -149,93 +188,359 @@ function EditableDetailItem({ label, field, value, onChange, type = 'text', isMo
                 </select>
             ) : type === 'textarea' ? (
                 <textarea value={value || ''} onChange={e => onChange(field, e.target.value)} rows={2} disabled={disabled}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300 resize-none disabled:opacity-50" />
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300 resize-none disabled:opacity-50" />
+            ) : isMoney ? (
+                <input type="text" placeholder="₹" value={formatInputRupee(value)} onChange={e => onChange(field, parseInputRupee(e.target.value))} disabled={disabled}
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50 font-semibold text-stone-800" />
             ) : (
                 <input type={type} value={value || ''} onChange={e => onChange(field, e.target.value)} disabled={disabled}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50" />
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50" />
             )}
         </div>
     );
 }
 
-// ─── PaymentsEditor ───────────────────────────────────────────────────────────
-// onChange(newPayments, totalReceived) — passes total up so parent can save it
-function PaymentsEditor({ payments = [], onChange, isEditing }) {
-    const handleChange = (idx, field, val) => {
-        const next = payments.map((p, i) => i === idx ? { ...p, [field]: val } : p);
-        const total = next.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-        onChange(next, total);
-    };
-    const addPayment = () => {
-        const next = [...payments, { no: payments.length + 1, amount: '', date: '' }];
-        const total = next.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-        onChange(next, total);
-    };
-    const removePayment = (idx) => {
-        const next = payments.filter((_, i) => i !== idx);
-        const total = next.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-        onChange(next, total);
+// ─── Standalone Sequential Payments Manager ──────────────────────────────────
+function PaymentsManager({ payments = [], onSavePayments, saving = false, projectType = 'General', receivables = 0, meta = {} }) {
+    const maxPayments = String(projectType || '').toLowerCase().includes('surya') ? 5 : 3;
+    const [addingMethod, setAddingMethod] = useState(false);
+    const [newMethod, setNewMethod] = useState('');
+    const [customMethods, setCustomMethods] = useState(meta['payment_method'] || []);
+
+    // Active new payment input state
+    const [nextPayment, setNextPayment] = useState({
+        amount: '',
+        remark: 'ONL',
+        date: getTodayDateString()
+    });
+
+    // Currently editing index for previously saved payments
+    const [editingIndex, setEditingIndex] = useState(null);
+    const [editPaymentState, setEditPaymentState] = useState({ amount: '', remark: 'ONL', date: getTodayDateString() });
+
+    useEffect(() => {
+        if (meta['payment_method']) setCustomMethods(meta['payment_method']);
+    }, [meta['payment_method']]);
+
+    const allMethods = Array.from(new Set([
+        ...DEFAULT_PAYMENT_METHODS,
+        ...(customMethods.map(m => typeof m === 'object' ? m.label || m.value : m))
+    ]));
+
+    const handleAddNewMethod = async () => {
+        const trimmed = newMethod.trim().toUpperCase();
+        if (!trimmed) return;
+        await supabase.from('metadata').insert({ category: 'payment_method', label: trimmed });
+        setCustomMethods(prev => [...prev, trimmed]);
+        setNewMethod('');
+        setAddingMethod(false);
     };
 
-    const displayTotal = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    // Filter valid saved payments
+    const savedPayments = payments.filter(p => p && p.amount !== '' && p.amount !== null && p.amount !== undefined);
+    const totalReceived = savedPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    const isFullyPaid = Number(receivables) === 0 && (totalReceived > 0 || savedPayments.length > 0);
 
-    if (!isEditing) return (
-        <div className="space-y-2">
-            {payments.length === 0 && <p className="text-xs text-stone-400 italic">No payments recorded</p>}
-            {payments.map((p, i) => (
-                <div key={i} className="bg-stone-50 p-3 rounded-xl flex justify-between items-center">
-                    <div>
-                        <p className="text-[9px] text-stone-400 font-bold uppercase">Payment {p.no || i + 1}</p>
-                        <p className="text-sm font-semibold text-emerald-600">₹{Number(p.amount || 0).toLocaleString('en-IN')}</p>
-                    </div>
-                    {p.date && <p className="text-xs text-stone-400">{p.date}</p>}
-                </div>
-            ))}
-            {payments.length > 0 && (
-                <div className="bg-emerald-50 rounded-xl p-3 flex justify-between items-center border border-emerald-100">
-                    <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">Total Received</p>
-                    <p className="text-sm font-bold text-emerald-700">₹{displayTotal.toLocaleString('en-IN')}</p>
-                </div>
-            )}
-        </div>
-    );
+    // Save a new payment slot (e.g. Payment 1, Payment 2)
+    const handleSaveNewPayment = async () => {
+        if (!nextPayment.amount || Number(nextPayment.amount) <= 0) return;
+        const newSlot = {
+            no: savedPayments.length + 1,
+            amount: nextPayment.amount,
+            remark: nextPayment.remark || 'ONL',
+            date: nextPayment.date || getTodayDateString()
+        };
+        const updatedList = [...savedPayments, newSlot];
+        await onSavePayments(updatedList);
+        // Reset new payment slot
+        setNextPayment({
+            amount: '',
+            remark: 'ONL',
+            date: getTodayDateString()
+        });
+    };
+
+    // Delete a saved payment
+    const handleRemoveSaved = async (idx) => {
+        const updatedList = savedPayments.filter((_, i) => i !== idx).map((p, i) => ({ ...p, no: i + 1 }));
+        await onSavePayments(updatedList);
+        if (editingIndex === idx) setEditingIndex(null);
+    };
+
+    // Start editing an existing frozen payment
+    const handleStartEdit = (idx) => {
+        const target = savedPayments[idx];
+        setEditingIndex(idx);
+        setEditPaymentState({
+            amount: target.amount,
+            remark: target.remark || 'ONL',
+            date: target.date || getTodayDateString()
+        });
+    };
+
+    // Save edited existing payment
+    const handleSaveEditedPayment = async (idx) => {
+        const updatedList = savedPayments.map((p, i) => {
+            if (i === idx) {
+                return {
+                    ...p,
+                    amount: editPaymentState.amount,
+                    remark: editPaymentState.remark,
+                    date: editPaymentState.date
+                };
+            }
+            return p;
+        });
+        await onSavePayments(updatedList);
+        setEditingIndex(null);
+    };
+
+    const canShowNextSlot = !isFullyPaid && savedPayments.length < maxPayments;
 
     return (
-        <div className="space-y-2">
-            {payments.map((p, i) => (
-                <div key={i} className="bg-stone-50 p-3 rounded-xl space-y-2 border border-stone-200">
-                    <div className="flex items-center justify-between">
-                        <p className="text-[9px] font-bold text-stone-400 uppercase">Payment {p.no || i + 1}</p>
-                        <button onClick={() => removePayment(i)} className="text-red-400 hover:text-red-600">
-                            <Trash2 className="w-3.5 h-3.5" />
+        <div className="bg-white rounded-2xl p-5 border border-stone-200/70 shadow-sm space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-amber-50 rounded-lg text-amber-600">
+                        <CreditCard size={15} />
+                    </div>
+                    <div>
+                        <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                            Payment Records ({String(projectType || '').toLowerCase().includes('surya') ? 'Max 5' : 'Max 3'})
+                        </h4>
+                        <p className="text-[10px] text-stone-400">
+                            {isFullyPaid ? 'Account fully settled' : `Recorded ${savedPayments.length} of ${maxPayments} installments`}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* List of Frozen / Saved Payments */}
+            <div className="space-y-2.5">
+                {savedPayments.map((p, i) => {
+                    const isEditingThis = editingIndex === i;
+
+                    if (isEditingThis) {
+                        return (
+                            <div key={i} className="bg-amber-50/50 rounded-xl p-3.5 border border-amber-200 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-md">
+                                        Editing Payment {p.no || i + 1}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditingIndex(null)}
+                                        className="text-stone-400 hover:text-stone-600 text-xs font-semibold"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="text-[9px] text-stone-400 uppercase font-bold block mb-1">Amount (₹)</label>
+                                        <input
+                                            type="text"
+                                            value={formatInputRupee(editPaymentState.amount)}
+                                            onChange={e => setEditPaymentState(prev => ({ ...prev, amount: parseInputRupee(e.target.value) }))}
+                                            className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] text-stone-400 uppercase font-bold block mb-1">Method</label>
+                                        <select
+                                            value={editPaymentState.remark || 'ONL'}
+                                            onChange={e => setEditPaymentState(prev => ({ ...prev, remark: e.target.value }))}
+                                            className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                        >
+                                            {allMethods.map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] text-stone-400 uppercase font-bold block mb-1">Date</label>
+                                        <input
+                                            type="date"
+                                            value={editPaymentState.date || getTodayDateString()}
+                                            onChange={e => setEditPaymentState(prev => ({ ...prev, date: e.target.value }))}
+                                            className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-2 pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSaveEditedPayment(i)}
+                                        disabled={saving}
+                                        className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                    >
+                                        <Save size={12} /> Save Update
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // Frozen read-only view (no editable white inputs)
+                    return (
+                        <div key={i} className="flex items-center justify-between p-3 bg-stone-100/70 hover:bg-stone-100 rounded-xl border border-stone-200/60 transition-colors">
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-700 bg-stone-200/80 px-2 py-0.5 rounded-md">
+                                    Payment {p.no || i + 1}
+                                </span>
+                                <span className="text-sm font-extrabold text-stone-900">
+                                    ₹{Number(p.amount || 0).toLocaleString('en-IN')}
+                                </span>
+                                <span className="text-[11px] font-bold text-stone-600 bg-stone-200/60 px-2 py-0.5 rounded-md uppercase">
+                                    {p.remark || 'ONL'}
+                                </span>
+                                <span className="text-xs text-stone-500 font-medium">
+                                    {p.date ? formatDate(p.date) : '–'}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => handleStartEdit(i)}
+                                    title="Edit payment"
+                                    className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-lg transition-colors"
+                                >
+                                    <Edit3 size={13} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveSaved(i)}
+                                    title="Delete payment"
+                                    className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                >
+                                    <Trash2 size={13} />
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {/* Active Next Payment Slot (Shows only if more payments allowed) */}
+                {canShowNextSlot && (
+                    <div className="bg-stone-50/90 rounded-xl p-4 border border-stone-200 space-y-3.5 mt-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-2.5 py-0.5 rounded-md">
+                                Payment {savedPayments.length + 1}
+                            </span>
+                            <span className="text-[10px] text-stone-400 font-medium">Enter details and save to lock</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label className="text-[9px] text-stone-400 uppercase font-bold block mb-1">Amount (₹)</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter amount..."
+                                    value={formatInputRupee(nextPayment.amount)}
+                                    onChange={e => setNextPayment(prev => ({ ...prev, amount: parseInputRupee(e.target.value) }))}
+                                    className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                />
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="text-[9px] text-stone-400 uppercase font-bold">Method</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddingMethod(!addingMethod)}
+                                        className="text-[9px] font-bold text-amber-600 hover:underline flex items-center gap-0.5"
+                                    >
+                                        <Plus size={10} /> Add
+                                    </button>
+                                </div>
+                                {addingMethod ? (
+                                    <div className="flex gap-1">
+                                        <input
+                                            type="text"
+                                            placeholder="New method..."
+                                            value={newMethod}
+                                            onChange={e => setNewMethod(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleAddNewMethod()}
+                                            className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleAddNewMethod}
+                                            className="bg-amber-500 text-white px-2 py-1 rounded-lg text-xs font-bold"
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAddingMethod(false)}
+                                            className="bg-stone-200 text-stone-600 px-2 py-1 rounded-lg text-xs"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <select
+                                        value={nextPayment.remark || 'ONL'}
+                                        onChange={e => setNextPayment(prev => ({ ...prev, remark: e.target.value }))}
+                                        className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                    >
+                                        {allMethods.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                )}
+                            </div>
+
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="text-[9px] text-stone-400 uppercase font-bold">Date</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setNextPayment(prev => ({ ...prev, date: getTodayDateString() }))}
+                                        className="text-[9px] font-bold text-amber-600 hover:underline"
+                                    >
+                                        Today
+                                    </button>
+                                </div>
+                                <input
+                                    type="date"
+                                    value={nextPayment.date || getTodayDateString()}
+                                    onChange={e => setNextPayment(prev => ({ ...prev, date: e.target.value || getTodayDateString() }))}
+                                    className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Dedicated Save button for this payment */}
+                        <button
+                            type="button"
+                            onClick={handleSaveNewPayment}
+                            disabled={saving || !nextPayment.amount}
+                            className="w-full bg-stone-900 hover:bg-stone-800 text-white py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm disabled:opacity-40"
+                        >
+                            <Save size={13} /> {saving ? 'Saving...' : `Save Payment ${savedPayments.length + 1}`}
                         </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <input type="number" placeholder="Amount (₹)" value={p.amount || ''}
-                            onChange={e => handleChange(i, 'amount', e.target.value)}
-                            className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300" />
-                        <input type="date" value={p.date || ''}
-                            onChange={e => handleChange(i, 'date', e.target.value)}
-                            className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300" />
-                    </div>
+                )}
+            </div>
+
+            {/* Total Received Summary */}
+            <div className="bg-emerald-50/70 rounded-xl p-3.5 flex justify-between items-center border border-emerald-100 mt-2">
+                <div>
+                    <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">Total Received (Auto-Sum)</p>
+                    <p className="text-xs text-emerald-600">Calculated across {savedPayments.length} recorded installment{savedPayments.length !== 1 ? 's' : ''}</p>
                 </div>
-            ))}
-            <button onClick={addPayment}
-                className="w-full flex items-center justify-center gap-1.5 border border-dashed border-stone-300 rounded-xl py-2 text-xs text-stone-500 hover:border-amber-400 hover:text-amber-600 transition-colors">
-                <Plus className="w-3.5 h-3.5" /> Add Payment
-            </button>
-            {payments.length > 0 && (
-                <div className="bg-amber-50 rounded-xl p-3 flex justify-between items-center border border-amber-100">
-                    <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Auto Total (will save)</p>
-                    <p className="text-sm font-bold text-amber-700">₹{displayTotal.toLocaleString('en-IN')}</p>
-                </div>
-            )}
+                <p className="text-base font-extrabold text-emerald-700">₹{totalReceived.toLocaleString('en-IN')}</p>
+            </div>
         </div>
     );
 }
 
-// ─── Subsidy status options ───────────────────────────────────────────────────
-const SUBSIDY_STATUS_OPTIONS = ['Pending', 'Submitted', 'Rejected', 'Redeemed', 'Disbursed'];
+// ─── Subsidy Status Tags (Applied, Claimed, Returned, Received) ───────────────
+const SUBSIDY_STATUS_OPTIONS = [
+    { id: 'Applied', dateField: null, classes: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300' },
+    { id: 'Claimed', dateField: 'subsidy_claim', classes: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300' },
+    { id: 'Returned', dateField: null, classes: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300' },
+    { id: 'Received', dateField: 'subsidy_received', classes: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300' },
+];
 
 // ─── CustomerDetailModal ──────────────────────────────────────────────────────
 export default function CustomerDetailModal({ customer, onClose, onUpdate, onDelete, user, meta = {} }) {
@@ -243,7 +548,9 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
     const [editingSection, setEditingSection] = useState(null);
     const [editData, setEditData] = useState({ ...customer });
     const [followUpText, setFollowUpText] = useState('');
+    const [commentText, setCommentText] = useState('');
     const [saving, setSaving] = useState(false);
+    const [savingPayments, setSavingPayments] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
     const isAdmin = user?.userType === 'admin';
@@ -268,35 +575,75 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
     };
 
     useEffect(() => {
-        setEditData({ ...customer });
+        const initialPayments = getInitialPayments(customer);
+        setEditData({
+            ...customer,
+            payments: initialPayments
+        });
         setLocalChecklist(normalizeChecklist(customer.project_checklist, customer));
         fetchLogs();
     }, [customer.id]);
 
     useEffect(() => {
         setLocalChecklist(normalizeChecklist(customer.project_checklist, customer));
-        setEditData(prev => ({
-            ...prev,
-            project_checklist: customer.project_checklist,
-            payments: customer.payments,
-            follow_ups: customer.follow_ups,
-            subsidy_history: customer.subsidy_history
-        }));
-    }, [customer.project_checklist, customer.payments, customer.follow_ups, customer.subsidy_history]);
+        setEditData(prev => {
+            const initialPayments = getInitialPayments(customer);
+            return {
+                ...prev,
+                project_checklist: customer.project_checklist,
+                payments: initialPayments,
+                follow_ups: customer.follow_ups,
+                subsidy_history: customer.subsidy_history,
+                stage_remarks: customer.stage_remarks
+            };
+        });
+    }, [customer.project_checklist, customer.payments, customer.follow_ups, customer.subsidy_history, customer.stage_remarks]);
 
-    // ── Auto-recalculate receivables whenever money fields change ──────────────
-    // receivables = quoted_amount − discount − total_received  (floor 0)
+    // ── Auto-recalculate financials & determine latest payment receipt date & auto tag ──
     const recalcFinancials = (patch, current) => {
         const merged = { ...current, ...patch };
-        const quoted = Number(merged.quoted_amount) || 0;
+        const quoted = Number(merged.quoted_amount_3) || 0;
         const discount = Number(merged.discount) || 0;
-        const received = Number(merged.total_received) || 0;
+
+        let received = 0;
+        let latestPaymentDate = merged.payment_reciept || null;
+
+        if (Array.isArray(merged.payments)) {
+            received = merged.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+            const nonZeroPayments = merged.payments.filter(p => p && (Number(p.amount) > 0 || p.date));
+            if (nonZeroPayments.length > 0) {
+                const lastP = nonZeroPayments[nonZeroPayments.length - 1];
+                if (lastP && lastP.date) {
+                    latestPaymentDate = lastP.date;
+                }
+            }
+        } else {
+            received = Number(merged.total_received) || 0;
+        }
+
         const receivables = Math.max(0, quoted - discount - received);
-        return { ...patch, receivables, total_cost: quoted };
+
+        const result = {
+            ...patch,
+            total_received: received,
+            receivables,
+            total_cost: quoted,
+            payment_reciept: latestPaymentDate,
+        };
+
+        // Automate financial tag transition when receivable reaches zero
+        if (receivables === 0 && (received > 0 || quoted > 0)) {
+            const isSurya = String(merged.project_type || '').toLowerCase().includes('surya');
+            result.financial_tag = isSurya
+                ? 'Final payment after meter installation'
+                : 'Final payment';
+        }
+
+        return result;
     };
 
     const handleChange = (field, val) => {
-        const FINANCE_FIELDS = ['quoted_amount', 'discount', 'total_received'];
+        const FINANCE_FIELDS = ['quoted_amount_3', 'discount'];
         if (FINANCE_FIELDS.includes(field)) {
             setEditData(prev => {
                 const patch = recalcFinancials({ [field]: val }, prev);
@@ -306,33 +653,67 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
             setEditData(prev => {
                 const updated = { ...prev, [field]: val };
                 if (field === 'project_type') {
-                    updated.financial_tag = "";
+                    const isZero = Number(prev.receivables) === 0 && (Number(prev.total_received) > 0 || Number(prev.quoted_amount_3) > 0);
+                    if (isZero) {
+                        const isSurya = String(val).toLowerCase().includes('surya');
+                        updated.financial_tag = isSurya ? 'Final payment after meter installation' : 'Final payment';
+                    } else {
+                        updated.financial_tag = "";
+                    }
                 }
                 return updated;
             });
         }
     };
 
-    // Payments: auto-update total_received from sum AND recalc receivables
-    const handlePaymentsChange = (newPayments, total) => {
+    // Live update for payments
+    const handlePaymentsChange = (newPayments) => {
         setEditData(prev => {
-            const patch = recalcFinancials({ payments: newPayments, total_received: total }, prev);
+            const patch = recalcFinancials({ payments: newPayments }, prev);
             return { ...prev, ...patch };
         });
     };
 
-    const handleToggleFinancialTag = async (tagId) => {
-        const newTag = editData.financial_tag === tagId ? null : tagId;
-        setEditData(prev => ({ ...prev, financial_tag: newTag }));
-        await onUpdate(customer.id, { financial_tag: newTag });
-        const tagLabel = FINANCIAL_TAGS.find(t => t.id === tagId)?.label || tagId;
-        logActivity(user.id, 'update', `${customer.customer_name}: Financial tag - ${tagLabel}`, customer.id);
+    // Direct save for payments
+    const handleSavePayments = async (customPayments) => {
+        setSavingPayments(true);
+        const paymentsToSave = customPayments || editData.payments || [];
+        const patch = recalcFinancials({ payments: paymentsToSave }, editData);
+
+        const updates = {
+            payments: paymentsToSave,
+            total_received: patch.total_received,
+            receivables: patch.receivables,
+            payment_reciept: patch.payment_reciept,
+            financial_tag: patch.financial_tag,
+        };
+
+        // Map flat columns
+        for (let k = 1; k <= 5; k++) {
+            const p = (paymentsToSave || [])[k - 1];
+            updates[`payment_${k}`] = p ? (p.amount !== '' && p.amount !== null && p.amount !== undefined ? Number(p.amount) : null) : null;
+            updates[`payment_remark_${k}`] = p ? (p.remark || null) : null;
+            updates[`payment_date_${k}`] = p ? (p.date || null) : null;
+        }
+
+        setEditData(prev => ({ ...prev, ...patch, ...updates }));
+        await onUpdate(customer.id, updates);
+        await logActivity(user.id, 'update', `${customer.customer_name}: Payments updated (Total: ₹${Number(patch.total_received || 0).toLocaleString('en-IN')})`, customer.id);
+        setSavingPayments(false);
         fetchLogs();
     };
 
     const handleSave = async () => {
         setSaving(true);
         const updates = { ...editData };
+
+        for (let k = 1; k <= 5; k++) {
+            const p = (updates.payments || [])[k - 1];
+            updates[`payment_${k}`] = p ? (p.amount !== '' ? Number(p.amount) : null) : null;
+            updates[`payment_remark_${k}`] = p ? (p.remark || null) : null;
+            updates[`payment_date_${k}`] = p ? (p.date || null) : null;
+        }
+
         let changeSummary = [];
         Object.keys(updates).forEach(key => {
             if (updates[key] !== customer[key] && key !== 'id' && key !== 'updated_at' && typeof updates[key] !== 'object') {
@@ -357,21 +738,64 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         fetchLogs();
     };
 
+    const handleAddComment = async () => {
+        const text = commentText.trim();
+        if (!text) return;
+        const timestamp = new Date().toISOString();
+        const line = `[${formatLogDate(timestamp)}] ${user.name} (${editData.stage || 'no stage'}): ${text}`;
+        const updatedInternalRemarks = editData.internal_remarks ? `${editData.internal_remarks}\n${line}` : line;
+        const updatedStageRemarks = [...(editData.stage_remarks || []), { text, author: user.name, date: timestamp, stage: editData.stage || null }];
+
+        await onUpdate(customer.id, { internal_remarks: updatedInternalRemarks, stage_remarks: updatedStageRemarks });
+        await logActivity(user.id, 'note', `Comment Added: ${text}`, customer.id);
+        setEditData(prev => ({ ...prev, internal_remarks: updatedInternalRemarks, stage_remarks: updatedStageRemarks }));
+        setCommentText('');
+        fetchLogs();
+    };
+
+    // ── Subsidy tag buttons: Applied, Claimed, Returned, Received ──
+    const handleSubsidyStatusClick = async (status) => {
+        const opt = SUBSIDY_STATUS_OPTIONS.find(o => o.id === status);
+        const today = getTodayDateString();
+        const entry = { status, date: today, author: user.name };
+        const updatedHistory = [...(editData.subsidy_history || []), entry];
+        const patch = { subsidy_history: updatedHistory };
+        if (opt?.dateField) patch[opt.dateField] = today;
+
+        setEditData(prev => ({ ...prev, ...patch }));
+        await onUpdate(customer.id, patch);
+        await logActivity(user.id, 'update', `${customer.customer_name}: Subsidy ${status}`, customer.id);
+        fetchLogs();
+    };
+
+    const handleSubsidyDateChange = async (field, val) => {
+        setEditData(prev => ({ ...prev, [field]: val }));
+        await onUpdate(customer.id, { [field]: val });
+        await logActivity(user.id, 'update', `${customer.customer_name}: ${field.replace(/_/g, ' ').toUpperCase()} set to ${formatDate(val)}`, customer.id);
+        fetchLogs();
+    };
+
     const handleSoftDelete = async () => {
         const deletedAt = new Date().toISOString();
         await logActivity(user.id, 'delete', `Soft-deleted: ${customer.customer_name}`, customer.id);
-        await onDelete(customer.id, deletedAt);   // pass timestamp for soft-delete
+        await onDelete(customer.id, deletedAt);
         onClose();
     };
 
-    const SectionHeader = ({ title, id, icon: Icon }) => (
+    const SectionHeader = ({ title, id, icon: Icon, hideEdit = false }) => (
         <div className="flex items-center justify-between mb-3 border-b border-stone-100 pb-1.5 mt-6">
-            <h3 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
-                <Icon size={12} /> {title}
+            <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                <Icon size={13} /> {title}
             </h3>
-            <button onClick={() => setEditingSection(editingSection === id ? null : id)} className="text-stone-400 hover:text-amber-600 transition-colors">
-                {editingSection === id ? <X size={14} /> : <Edit3 size={12} />}
-            </button>
+            {!hideEdit && (
+                <button
+                    onClick={() => setEditingSection(editingSection === id ? null : id)}
+                    className="text-stone-400 hover:text-amber-600 transition-colors p-1 rounded-lg hover:bg-amber-50"
+                    title={editingSection === id ? "Cancel Editing" : "Edit Section"}
+                >
+                    {editingSection === id ? <X size={14} /> : <Edit3 size={13} />}
+                </button>
+            )}
         </div>
     );
 
@@ -379,27 +803,11 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-5xl h-[94vh] overflow-hidden flex flex-col border border-stone-100">
 
-                {/* Header */}
-                <div className="bg-stone-900 px-6 py-5 flex justify-between items-center flex-shrink-0">
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-xl font-bold text-white">{customer.customer_name}</h2>
-                            <span className="text-[9px] bg-white/10 text-stone-400 px-2 py-0.5 rounded font-bold uppercase tracking-widest">{customer.crn || 'NO-CRN'}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-2">
-                            {customer.google_maps_location_link && (
-                                <a href={customer.google_maps_location_link} target="_blank" rel="noreferrer"
-                                    className="flex items-center gap-1.5 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20">
-                                    <MapPin size={10} /> VIEW MAPS
-                                </a>
-                            )}
-                            {customer.google_drive_docs_link && (
-                                <a href={customer.google_drive_docs_link} target="_blank" rel="noreferrer"
-                                    className="flex items-center gap-1.5 bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">
-                                    <FolderOpen size={10} /> GOOGLE DRIVE
-                                </a>
-                            )}
-                        </div>
+                {/* Header (Original clean format) */}
+                <div className="bg-stone-900 px-6 py-4 flex justify-between items-center flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-xl font-bold text-white">{customer.customer_name}</h2>
+                        <span className="text-[10px] bg-white/10 text-stone-400 px-2 py-0.5 rounded font-bold uppercase tracking-widest">{customer.crn || 'NO-CRN'}</span>
                     </div>
                     <div className="flex gap-2">
                         {isAdmin && <button onClick={() => setShowDeleteConfirm(true)} className="p-2 text-white/30 hover:text-red-400"><Trash2 size={18} /></button>}
@@ -411,13 +819,12 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                 <div className="flex bg-stone-900 px-6 gap-6 border-t border-white/5 flex-shrink-0">
                     {[
                         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-                        // { id: 'project_and_technical', label: "Project & Technical", icon: Zap },
                         { id: 'finance', label: 'Finance & Bank', icon: IndianRupee },
                         { id: 'checklist', label: 'Checklist', icon: CheckSquare },
                         { id: 'history', label: 'Notes & History', icon: History },
                     ].map(tab => (
                         <button key={tab.id} onClick={() => { setActiveTab(tab.id); setEditingSection(null); }}
-                            className={`flex items-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id ? 'text-amber-400 border-amber-400' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
+                            className={`flex items-center gap-2 py-3 text-[11px] font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id ? 'text-amber-400 border-amber-400' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
                             <tab.icon size={12} /> {tab.label}
                         </button>
                     ))}
@@ -427,135 +834,128 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
                     {/* ── OVERVIEW ── */}
                     {activeTab === 'overview' && (
-                        <div className="space-y-4 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-3 animate-in fade-in duration-300">
+                            {/* Top bar: Stage control (left) + Comments (right) */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
                                 {/* Stage select */}
-                                <div className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
-                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-1.5 block">Primary Stage</label>
-                                    <select value={editData.stage} onChange={async (e) => {
-                                        const newStage = e.target.value;
-                                        const oldStage = editData.stage;
-                                        setEditData(prev => ({ ...prev, stage: newStage }));
-                                        await onUpdate(customer.id, { stage: newStage });
-                                        await logActivity(user.id, 'stage_change', `STAGE: ${oldStage} → ${newStage}`, customer.id);
-                                        fetchLogs();
-                                    }} className="w-full p-2.5 bg-white border border-stone-200 rounded-xl font-bold text-stone-700 outline-none">
-                                        {PRIMARY_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                                    </select>
-                                </div>
-                                <div className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
-                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-1.5 block">Financial Tag</label>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {getFinancialTags(editData.project_type).map(tagId => {
-                                            const isActive = editData.financial_tag === tagId;
-                                            const colors = FINANCIAL_TAG_COLORS[tagId] || { bg: 'bg-stone-50', text: 'text-stone-700', border: 'border-stone-200', dot: 'bg-stone-400' };
+                                <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm flex flex-col justify-between">
+                                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">Primary Stage</label>
+                                    <div className="flex gap-2">
+                                        <select value={editData.stage} onChange={async (e) => {
+                                            const newStage = e.target.value;
+                                            const oldStage = editData.stage;
+                                            setEditData(prev => ({ ...prev, stage: newStage }));
+                                            await onUpdate(customer.id, { stage: newStage });
+                                            await logActivity(user.id, 'stage_change', `STAGE: ${oldStage} → ${newStage}`, customer.id);
+                                            fetchLogs();
+                                        }} className="flex-1 p-2 bg-white border border-stone-200 rounded-lg font-semibold text-xs text-stone-700 outline-none">
+                                            {PRIMARY_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                                        </select>
+                                        {(() => {
+                                            const currentIndex = PRIMARY_STAGES.findIndex(s => s.id === editData.stage);
+                                            const nextStage = currentIndex !== -1 && currentIndex < PRIMARY_STAGES.length - 1 ? PRIMARY_STAGES[currentIndex + 1] : null;
                                             return (
-                                                <button key={tagId} onClick={() => handleToggleFinancialTag(tagId)}
-                                                    className={`inline-flex items-center gap-1 text-[9px] px-2.5 py-1 rounded-full font-bold border transition-all ${isActive ? `${colors.bg} ${colors.text} ${colors.border}` : 'bg-stone-50 text-stone-400 border-transparent hover:border-stone-200'}`}>
-                                                    {isActive && <span className={`w-1 h-1 rounded-full ${colors.dot}`} />}
-                                                    {tagId}
+                                                <button
+                                                    type="button"
+                                                    disabled={!nextStage}
+                                                    onClick={async () => {
+                                                        if (nextStage) {
+                                                            const oldStage = editData.stage;
+                                                            setEditData(prev => ({ ...prev, stage: nextStage.id }));
+                                                            await onUpdate(customer.id, { stage: nextStage.id });
+                                                            await logActivity(user.id, 'stage_change', `STAGE: ${oldStage} → ${nextStage.id}`, customer.id);
+                                                            fetchLogs();
+                                                        }
+                                                    }}
+                                                    title={nextStage ? `Move to next stage: ${nextStage.label}` : 'Already at the final stage'}
+                                                    className="px-3 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all font-bold text-xs"
+                                                >
+                                                    <span className="leading-none">→</span>
                                                 </button>
                                             );
-                                        })}
+                                        })()}
+                                    </div>
+                                </div>
+
+                                {/* Centralized comment box */}
+                                <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm flex flex-col justify-between">
+                                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 flex items-center gap-1">
+                                        <MessageSquare size={11} /> Add Comment
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input value={commentText} onChange={e => setCommentText(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleAddComment()}
+                                            placeholder="Note for this customer..."
+                                            className="flex-1 p-2 bg-white border border-stone-200 rounded-lg text-xs text-stone-700 outline-none focus:ring-1 focus:ring-amber-300" />
+                                        <button type="button" onClick={handleAddComment} disabled={!commentText.trim()}
+                                            className="px-3 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all">
+                                            <Save size={13} />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Customer Info */}
-                            <section>
+                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
                                 <SectionHeader title="Customer Info" id="cus" icon={User} />
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
                                     <EditableDetailItem label="Customer Name" field="customer_name" value={editData.customer_name} onChange={handleChange} isEditing={editingSection === 'cus'} />
                                     <EditableDetailItem label="Phone Number" field="phone_number" value={editData.phone_number} onChange={handleChange} isEditing={editingSection === 'cus'} />
                                     <EditableDetailItem label="AREA" field="area" value={editData.area} onChange={handleChange} isEditing={editingSection === 'cus'} />
                                     <EditableDetailItem label="Full Installation Address" field="full_installation_address" value={editData.full_installation_address} onChange={handleChange} isEditing={editingSection === 'cus'} noTruncate type="textarea" className="col-span-2 md:col-span-3" />
-                                    <EditableDetailItem label="Google Drive / Docs Link" field="google_drive_docs_link" value={editData.google_drive_docs_link} onChange={handleChange} isEditing={editingSection === 'cus'} />
-                                    <EditableDetailItem label="Google Maps Location Link" field="google_maps_location_link" value={editData.google_maps_location_link} onChange={handleChange} isEditing={editingSection === 'cus'} />
                                 </div>
-                                <div className="space-y-6 animate-in fade-in duration-300">
-                                    <section>
-                                        <SectionHeader title="Project & Technical" id="pro" icon={Zap} />
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                            <EditableDetailItem label="System Capacity (kWp)" field="system_capacity_kwp" value={editData.system_capacity_kwp} onChange={handleChange} type="number" isEnergy isEditing={editingSection === 'pro'} />
-                                            <EditableDetailItem label="APPLICATION NO" field="application_no" value={editData.application_no} onChange={handleChange} isEditing={editingSection === 'pro'} />
-                                            <EditableDetailItem label="PANEL" field="panel" value={editData.panel} onChange={handleChange} options={meta['panel']} category="panel" isEditing={editingSection === 'pro'} />
-                                            <EditableDetailItem label="INVERTER" field="inverter" value={editData.inverter} onChange={handleChange} options={meta['inverter']} category="inverter" isEditing={editingSection === 'pro'} />
-                                            <EditableDetailItem label="DATE OF REGISTRATION" field="date_of_registration" value={editData.date_of_registration} onChange={handleChange} type="date" isEditing={editingSection === 'pro'} />
-                                            <EditableDetailItem label="METER PHASE" field="meter_phase" value={editData.meter_phase} onChange={handleChange} options={meta['meter_phase']} category="meter_phase" isEditing={editingSection === 'pro'} />
-                                            <EditableDetailItem label="Consumer Number" field="consumer_number" value={editData.consumer_number} onChange={handleChange} isEditing={editingSection === 'pro'} />
-                                        </div>
-                                    </section>
-                                </div>
-                                {/* <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    <EditableDetailItem label="Quoted Amt" field="quoted_amount" value={editData.quoted_amount} onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
-                                    <EditableDetailItem label="Quoted Amount with Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Payment Reciept" field="payment_reciept" value={editData.payment_reciept} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Payment Notes" field="payment_notes" value={editData.payment_notes} onChange={handleChange} isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Project Type" field="project_type" value={editData.project_type} onChange={handleChange} options={meta?.['project_type'] || []} category="project_type" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Payment Type" field="payment_type" value={editData.payment_type} onChange={handleChange} options={meta?.['payment_type'] || []} category="payment_type" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Last Transaction Id" field="last_transaction_id" value={editData.last_transaction_id} onChange={handleChange} isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Subsidy Claim" field="subsidy_claim" value={editData.subsidy_claim} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Subsidy Received" field="subsidy_received" value={editData.subsidy_received} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
-                                </div> */}
                             </section>
 
-
-                        </div>
-
-                    )}
-
-
-                    {/* Project & Technical */}
-                    {/* {activeTab === 'project_and_technical' && (
-                        <div className="space-y-6 animate-in fade-in duration-300">
-                            <section>
+                            {/* Project & Technical */}
+                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
                                 <SectionHeader title="Project & Technical" id="pro" icon={Zap} />
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                                     <EditableDetailItem label="System Capacity (kWp)" field="system_capacity_kwp" value={editData.system_capacity_kwp} onChange={handleChange} type="number" isEnergy isEditing={editingSection === 'pro'} />
+                                    <EditableDetailItem label="PO No" field="po_no" value={editData.po_no} onChange={handleChange} isEditing={editingSection === 'pro'} />
                                     <EditableDetailItem label="APPLICATION NO" field="application_no" value={editData.application_no} onChange={handleChange} isEditing={editingSection === 'pro'} />
+                                    <EditableDetailItem label="Consumer Number" field="consumer_number" value={editData.consumer_number} onChange={handleChange} isEditing={editingSection === 'pro'} />
                                     <EditableDetailItem label="PANEL" field="panel" value={editData.panel} onChange={handleChange} options={meta['panel']} category="panel" isEditing={editingSection === 'pro'} />
                                     <EditableDetailItem label="INVERTER" field="inverter" value={editData.inverter} onChange={handleChange} options={meta['inverter']} category="inverter" isEditing={editingSection === 'pro'} />
                                     <EditableDetailItem label="DATE OF REGISTRATION" field="date_of_registration" value={editData.date_of_registration} onChange={handleChange} type="date" isEditing={editingSection === 'pro'} />
                                     <EditableDetailItem label="METER PHASE" field="meter_phase" value={editData.meter_phase} onChange={handleChange} options={meta['meter_phase']} category="meter_phase" isEditing={editingSection === 'pro'} />
-                                    <EditableDetailItem label="Consumer Number" field="consumer_number" value={editData.consumer_number} onChange={handleChange} isEditing={editingSection === 'pro'} />
                                 </div>
                             </section>
                         </div>
-                    )} */}
-
-
+                    )}
 
                     {/* ── FINANCE & BANK ── */}
                     {activeTab === 'finance' && (
-                        <div className="space-y-6 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-4 animate-in fade-in duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
                                 {/* Project Type */}
-                                <div className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
-                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-1.5 block">Project Type</label>
+                                <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm">
+                                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">Project Type</label>
                                     <select value={editData.project_type || 'General'} onChange={async (e) => {
                                         const newType = e.target.value;
-                                        setEditData(prev => ({ ...prev, project_type: newType, financial_tag: "" }));
-                                        await onUpdate(customer.id, { project_type: newType, financial_tag: "" });
+                                        const isZero = Number(editData.receivables) === 0 && (Number(editData.total_received) > 0 || Number(editData.quoted_amount_3) > 0);
+                                        const newTag = isZero
+                                            ? (String(newType).toLowerCase().includes('surya') ? 'Final payment after meter installation' : 'Final payment')
+                                            : '';
+                                        setEditData(prev => ({ ...prev, project_type: newType, financial_tag: newTag }));
+                                        await onUpdate(customer.id, { project_type: newType, financial_tag: newTag });
                                         await logActivity(user.id, 'update', `${customer.customer_name}: Project Type changed to ${newType}`, customer.id);
                                         fetchLogs();
-                                    }} className="w-full p-2.5 bg-white border border-stone-200 rounded-xl font-bold text-stone-700 outline-none">
+                                    }} className="w-full p-2 bg-white border border-stone-200 rounded-lg font-semibold text-xs text-stone-700 outline-none">
                                         <option value="General">General</option>
                                         <option value="PM SURYA">PM SURYA</option>
                                     </select>
                                 </div>
 
                                 {/* Financial Tag */}
-                                <div className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
-                                    <label className="text-[9px] text-stone-400 font-bold uppercase mb-1.5 block">Financial Tag</label>
+                                <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm">
+                                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">Financial Tag</label>
                                     <select value={editData.financial_tag || ''} onChange={async (e) => {
                                         const newTag = e.target.value;
                                         setEditData(prev => ({ ...prev, financial_tag: newTag }));
                                         await onUpdate(customer.id, { financial_tag: newTag });
                                         await logActivity(user.id, 'update', `${customer.customer_name}: Financial Tag updated to ${newTag}`, customer.id);
                                         fetchLogs();
-                                    }} className="w-full p-2.5 bg-white border border-stone-200 rounded-xl font-bold text-stone-700 outline-none">
+                                    }} className="w-full p-2 bg-white border border-stone-200 rounded-lg font-semibold text-xs text-stone-700 outline-none">
                                         <option value="">Select Tag...</option>
                                         {getFinancialTags(editData.project_type).map(tag => (
                                             <option key={tag} value={tag}>{tag}</option>
@@ -564,57 +964,110 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 </div>
                             </div>
 
-                            <section>
+                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
                                 <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
 
-                                    <EditableDetailItem label="Quoted Amt" field="quoted_amount" value={editData.quoted_amount} onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
-                                    <EditableDetailItem 
-                                        label="Payment Type" 
-                                        field="payment_type" 
-                                        value={editData.payment_type} 
-                                        onChange={handleChange} 
-                                        options={meta?.['payment_type'] || []} 
-                                        category="payment_type" 
-                                        isEditing={editingSection === 'fin'} 
+                                {/* Row 1: Quoted (editable), Received (Read-Only), Receivable (Read-Only) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">
+                                    <EditableDetailItem
+                                        label="Quoted Amt"
+                                        field="quoted_amount_3"
+                                        value={editData.quoted_amount_3}
+                                        onChange={handleChange}
+                                        type="number"
+                                        isEditing={editingSection === 'fin'}
+                                        isMoney
                                     />
-                                    <EditableDetailItem label="Last Transaction Id" field="last_transaction_id" value={editData.last_transaction_id} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <div className="bg-stone-50 py-1.5 px-3 rounded-xl border border-stone-100/80">
+                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Received (Auto)</p>
+                                        <p className="text-sm font-semibold text-emerald-600">
+                                            {fmt(editData.total_received)}
+                                        </p>
+                                    </div>
+                                    <div className={`py-1.5 px-3 rounded-xl border ${Number(editData.receivables) === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-stone-50 border-stone-100/80 text-stone-800'}`}>
+                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Receivable (Auto)</p>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-semibold">
+                                                {fmt(editData.receivables)}
+                                            </p>
+                                            {Number(editData.receivables) === 0 && (
+                                                <span className="flex items-center gap-1 text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+                                                    <CheckCircle2 size={10} /> Fully Paid
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 pt-2.5 border-t border-stone-100">
                                     <EditableDetailItem label="Date" field="date" value={editData.date} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Remarks" field="quoted_amount_2" value={editData.quoted_amount_2} onChange={handleChange} isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Subsidy Claim" field="subsidy_claim" value={editData.subsidy_claim} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Subsidy Received" field="subsidy_received" value={editData.subsidy_received} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Payment Reciept" field="payment_reciept" value={editData.payment_reciept} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
-                                    <EditableDetailItem label="Payment Notes" field="payment_notes" value={editData.payment_notes} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <EditableDetailItem label="Bill No" field="bill_no" value={editData.bill_no} onChange={handleChange} isEditing={editingSection === 'fin'} />
+                                    <div className="bg-stone-50 py-1.5 px-3 rounded-xl border border-stone-100/80">
+                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
+                                            Payment Receipt Date (Auto)
+                                        </p>
+                                        <p className="text-sm font-semibold text-stone-800">
+                                            {editData.payment_reciept ? formatDate(editData.payment_reciept) : '–'}
+                                        </p>
+                                    </div>
                                 </div>
                             </section>
-                            {/* <section>
-                                            <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
-                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                                                <EditableDetailItem label="Quoted Amt"  field="quoted_amount"  value={editData.quoted_amount}  onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
-                                                <EditableDetailItem label="Received"    field="total_received"  value={editData.total_received} onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
-                                                <EditableDetailItem label="Receivable"  field="receivables"     value={editData.receivables}    onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
-                                                <EditableDetailItem label="Discount"    field="discount"        value={editData.discount}       onChange={handleChange} type="number" isEditing={editingSection === 'fin'} isMoney />
-                                                <EditableDetailItem label="Pay Type"    field="payment_type"    value={editData.payment_type}   onChange={handleChange} options={meta['payment_type']} category="payment_type" isEditing={editingSection === 'fin'} />
-                                            </div>
-                                            <PaymentsEditor
-                                                payments={editData.payments || []}
-                                                onChange={handlePaymentsChange}
-                                                isEditing={editingSection === 'fin'}
-                                            />
-                                        </section> */}
 
-                            {/* Subsidy — uses generic HistoryEntryEditor */}
-                            {/* <section>
-                                            <SectionHeader title="Subsidy Status History" id="sub" icon={Banknote} />
-                                            <HistoryEntryEditor
-                                                entries={editData.subsidy_history || []}
-                                                onChange={val => handleChange('subsidy_history', val)}
-                                                isEditing={editingSection === 'sub'}
-                                                statusOptions={SUBSIDY_STATUS_OPTIONS}
-                                                title="Subsidy Entry"
-                                                emptyText="No subsidy history recorded"
-                                            />
-                                        </section> */}
+                            {/* Standalone Sequential Payments Section */}
+                            <PaymentsManager
+                                payments={editData.payments || []}
+                                onUpdatePayments={handlePaymentsChange}
+                                onSavePayments={handleSavePayments}
+                                saving={savingPayments}
+                                projectType={editData.project_type}
+                                receivables={editData.receivables}
+                                meta={meta}
+                            />
+
+                            {/* Subsidy — dates side by side + one-tap status tags */}
+                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                                <div className="flex items-center gap-2 mb-2 border-b border-stone-100 pb-1 mt-1">
+                                    <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
+                                        <Banknote size={13} /> Subsidy Status
+                                    </h3>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2.5 mb-2.5">
+                                    <div className="bg-stone-50 py-1 px-2.5 rounded-xl border border-stone-100">
+                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Subsidy Claim</p>
+                                        <input type="date" value={editData.subsidy_claim || ''}
+                                            onChange={e => handleSubsidyDateChange('subsidy_claim', e.target.value)}
+                                            className="w-full bg-transparent text-xs font-semibold text-stone-800 outline-none" />
+                                    </div>
+                                    <div className="bg-stone-50 py-1 px-2.5 rounded-xl border border-stone-100">
+                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Subsidy Received</p>
+                                        <input type="date" value={editData.subsidy_received || ''}
+                                            onChange={e => handleSubsidyDateChange('subsidy_received', e.target.value)}
+                                            className="w-full bg-transparent text-xs font-semibold text-stone-800 outline-none" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2.5">
+                                    {SUBSIDY_STATUS_OPTIONS.map(opt => (
+                                        <button key={opt.id} type="button" onClick={() => handleSubsidyStatusClick(opt.id)}
+                                            className={`py-1.5 px-2.5 rounded-lg text-xs font-bold border transition-colors text-center shadow-sm ${opt.classes}`}>
+                                            {opt.id}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="space-y-1 mt-2 pt-2 border-t border-stone-100">
+                                    {(editData.subsidy_history || []).length === 0 && (
+                                        <p className="text-xs text-stone-400 italic">No subsidy history recorded</p>
+                                    )}
+                                    {(editData.subsidy_history || []).slice().reverse().map((h, i) => (
+                                        <div key={i} className="flex items-center justify-between bg-stone-50 px-2.5 py-1.5 rounded-lg text-xs border border-stone-100">
+                                            <span className="font-bold text-stone-700">{h.status}</span>
+                                            <span className="text-stone-400">{h.date ? formatDate(h.date) : ''} · {h.author}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
                         </div>
                     )}
 
@@ -650,11 +1103,11 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
                             {/* Add Custom Item Section */}
                             <div className="bg-white p-4 rounded-xl border border-stone-100 shadow-sm mb-3">
-                                <h4 className="text-[9px] font-bold text-stone-400 mb-2.5 uppercase tracking-widest border-b border-stone-50 pb-1.5">Add Custom Checklist Item</h4>
+                                <h4 className="text-[10px] font-bold text-stone-400 mb-2.5 uppercase tracking-widest border-b border-stone-50 pb-1.5">Add Custom Checklist Item</h4>
                                 <div className="flex gap-2">
                                     <input type="text" placeholder="e.g. Verify solar net meter application..." value={newItemLabel}
                                         onChange={e => setNewItemLabel(e.target.value)}
-                                        className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-amber-400" />
+                                        className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-amber-400" />
                                     <button onClick={() => {
                                         const label = newItemLabel.trim();
                                         if (!label) return;
@@ -668,7 +1121,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                         setLocalChecklist([...localChecklist, newItem]);
                                         setNewItemLabel('');
                                         setChecklistDirty(true);
-                                    }} className="bg-stone-900 text-white px-3.5 rounded-lg text-xs font-bold hover:bg-stone-800 transition-all flex items-center gap-1.5">
+                                    }} className="bg-stone-900 text-white px-4 rounded-lg text-xs font-bold hover:bg-stone-800 transition-all flex items-center gap-1.5">
                                         <Plus className="w-3.5 h-3.5" /> Add
                                     </button>
                                 </div>
@@ -677,7 +1130,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                             <div className="space-y-3">
                                 {sections.map(sec => (
                                     <div key={sec} className="bg-white p-4 rounded-xl border border-stone-100 shadow-sm">
-                                        <h4 className="text-[9px] font-bold text-stone-400 mb-3 uppercase tracking-widest border-b border-stone-50 pb-1.5">{sec}</h4>
+                                        <h4 className="text-[10px] font-bold text-stone-400 mb-3 uppercase tracking-widest border-b border-stone-50 pb-1.5">{sec}</h4>
                                         <div className="flex flex-col gap-2">
                                             {localChecklist.filter(i => i.section === sec).map(item => (
                                                 <div key={item.id} className="py-1.5 px-3 bg-stone-50/50 rounded-xl border border-stone-100 hover:border-stone-200 transition-all flex items-center justify-between gap-3">
@@ -688,7 +1141,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                         }} className="mt-0.5 rounded border-stone-300 text-amber-500 focus:ring-amber-500 cursor-pointer" />
                                                         <div className="flex-1 min-w-0">
                                                             <span className={`text-xs block font-semibold ${item.checked ? 'text-stone-400 line-through font-normal' : 'text-stone-700'}`}>{item.label}</span>
-                                                            {item.checked && <span className="text-[8px] text-stone-400 font-bold uppercase mt-0.5 block">By {item.checkedBy} on {formatLogDate(item.checkedAt)}</span>}
+                                                            {item.checked && <span className="text-[10px] text-stone-400 font-bold uppercase mt-0.5 block">By {item.checkedBy} on {formatLogDate(item.checkedAt)}</span>}
                                                         </div>
                                                     </label>
 
@@ -748,22 +1201,22 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 <SectionHeader title="Internal Remarks (Staff Only)" id="rem" icon={ShieldCheck} />
                                 {editingSection === 'rem' ? (
                                     <textarea value={editData.internal_remarks || ''} onChange={e => handleChange('internal_remarks', e.target.value)}
-                                        className="w-full p-4 border rounded-2xl text-xs bg-stone-50 focus:ring-1 focus:ring-amber-400 outline-none" rows={4}
+                                        className="w-full p-4 border rounded-2xl text-sm bg-stone-50 focus:ring-1 focus:ring-amber-400 outline-none" rows={4}
                                         placeholder="Sensitive notes visible only to internal staff..." />
                                 ) : (
-                                    <div className="bg-stone-100/50 p-4 rounded-2xl border border-stone-200 text-xs text-stone-600 italic">
+                                    <div className="bg-stone-100/50 p-4 rounded-2xl border border-stone-200 text-sm text-stone-600 italic whitespace-pre-wrap">
                                         {editData.internal_remarks || 'No internal remarks recorded yet.'}
                                     </div>
                                 )}
                             </section>
 
                             <section>
-                                <h3 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-6">Activity Notes</h3>
+                                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-6">Activity Notes</h3>
                                 <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2">
                                     {(editData.follow_ups || []).slice().reverse().map((f, i) => (
                                         <div key={i} className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
                                             <p className="text-xs text-stone-800 leading-relaxed">{f.text}</p>
-                                            <div className="flex justify-between mt-2.5 text-[8px] text-stone-400 font-bold uppercase">
+                                            <div className="flex justify-between mt-2.5 text-[10px] text-stone-400 font-bold uppercase">
                                                 <span>{f.author}</span><span>{formatLogDate(f.date)}</span>
                                             </div>
                                         </div>
@@ -773,23 +1226,23 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                     <input value={followUpText} onChange={e => setFollowUpText(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && handleAddNote()}
                                         placeholder="Share an update with the team..."
-                                        className="flex-1 px-4 py-3 bg-white border border-stone-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-amber-400" />
-                                    <button onClick={handleAddNote} className="bg-stone-900 text-white px-6 rounded-xl hover:bg-stone-800 transition-all">
+                                        className="flex-1 px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm outline-none focus:ring-1 focus:ring-amber-400" />
+                                    <button onClick={handleAddNote} className="bg-stone-900 text-white px-6 rounded-xl hover:bg-stone-800 transition-all flex items-center justify-center">
                                         <Send size={16} />
                                     </button>
                                 </div>
                             </section>
 
                             <section>
-                                <h3 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-6">Detailed System History</h3>
+                                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-6">Detailed System History</h3>
                                 <div className="space-y-4">
                                     {activityLogs.length > 0 ? activityLogs.map((log, i) => (
                                         <div key={i} className="relative pl-6 pb-4 border-l border-stone-100 last:border-0">
                                             <div className="absolute -left-[4.5px] top-0 w-2 h-2 rounded-full bg-white border-2 border-amber-500 shadow-sm" />
                                             <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm -mt-1.5 hover:border-amber-200 transition-colors">
                                                 <div className="flex justify-between items-start mb-1.5">
-                                                    <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase ${ACTION_COLORS[log.action] || 'bg-stone-100 text-stone-600'}`}>{log.action}</span>
-                                                    <span className="text-[8px] text-stone-400 font-bold">{formatLogDate(log.created_at)}</span>
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase ${ACTION_COLORS[log.action] || 'bg-stone-100 text-stone-600'}`}>{log.action}</span>
+                                                    <span className="text-[10px] text-stone-400 font-bold">{formatLogDate(log.created_at)}</span>
                                                 </div>
                                                 <div className="text-xs text-stone-700 font-medium whitespace-pre-wrap leading-relaxed">
                                                     {log.message.includes('|') ? (
@@ -800,10 +1253,10 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                         </div>
                                                     ) : log.message}
                                                 </div>
-                                                <p className="text-[8px] text-stone-400 font-bold uppercase mt-2 border-t border-stone-50 pt-1.5">User: {log.profiles?.name || 'System'}</p>
+                                                <p className="text-[10px] text-stone-400 font-bold uppercase mt-2 border-t border-stone-50 pt-1.5">User: {log.profiles?.name || 'System'}</p>
                                             </div>
                                         </div>
-                                    )) : <p className="text-[8px] text-stone-400 italic">No timeline entries found.</p>}
+                                    )) : <p className="text-xs text-stone-400 italic">No timeline entries found.</p>}
                                 </div>
                             </section>
                         </div>

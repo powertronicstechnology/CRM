@@ -54,7 +54,7 @@ export const FINANCIAL_TAG_COLORS = {
 };
 
 // Supabase metadata table categories (one per managed dropdown)
-export const META_CATEGORIES = ['panel', 'inverter', 'meter_phase', 'file_given_to_customer', 'meter_file_submission', 'meter_instaled', 'panel_and_inverter', 'fabrication_and_wiring', 'subsidy_approval_status', 'project_type', 'payment_type', 'date'];
+export const META_CATEGORIES = ['panel', 'inverter', 'meter_phase', 'payment_method'];
 
 export const APP_ROLES = [
     { id: 'admin', label: 'Admin', user_type: 'admin', role: 'Admin' },

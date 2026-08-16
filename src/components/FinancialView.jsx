@@ -35,13 +35,6 @@ export default function FinancialView({ customers, onSelectCustomer, projectType
         return acc;
     }, {});
 
-    if (tagged.length === 0) return (
-        <div className="flex flex-col items-center justify-center h-64 text-stone-400">
-            <Tag className="w-10 h-10 mb-3 text-stone-300" />
-            <p className="font-medium text-stone-500 text-sm">No financial tags active for {projectType}</p>
-        </div>
-    );
-
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Money summary */}
@@ -69,8 +62,7 @@ export default function FinancialView({ customers, onSelectCustomer, projectType
                 </button>
                 {projectTags.map(tag => {
                     const groupCount = (grouped[tag.id] || []).length;
-                    if (groupCount === 0) return null;
-                    const colors = FINANCIAL_TAG_COLORS[tag.id] || {};
+                    const colors = FINANCIAL_TAG_COLORS[tag.id] || { bg: 'bg-stone-50', text: 'text-stone-700', border: 'border-stone-200', dot: 'bg-stone-400' };
                     const isSelected = activeFilter === tag.id;
                     return (
                         <button key={tag.id} onClick={() => setActiveFilter(isSelected ? null : tag.id)}
@@ -83,6 +75,12 @@ export default function FinancialView({ customers, onSelectCustomer, projectType
             </div>
 
             {/* Grouped listing */}
+            {projectTags.filter(tag => !activeFilter || activeFilter === tag.id).every(tag => !grouped[tag.id]) && (
+                <div className="flex flex-col items-center justify-center py-12 text-stone-400 bg-white rounded-2xl border border-stone-100 shadow-sm">
+                    <Tag className="w-8 h-8 mb-2 text-stone-300" />
+                    <p className="text-sm font-medium text-stone-500">No customers found with these tags</p>
+                </div>
+            )}
             {projectTags.filter(tag => !activeFilter || activeFilter === tag.id).map(tag => {
                 const group = grouped[tag.id];
                 if (!group) return null;

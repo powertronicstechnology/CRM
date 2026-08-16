@@ -58,11 +58,12 @@ export function exportAllToCSV(customers) {
     const headers = [
         'CRN', 'Customer Name', 'Phone', 'Email', 'Location', 'Branch',
         'Capacity (kWp)', 'Project Type', 'POC', 'Stage', 'Financial Tag',
-        'Quoted Amount', 'Quoted Amount 2', 'Bank Quote', 'Receivables', 'Discount',
+        'Quoted Amount', 'Quoted Amount 2', 'Quoted Amount 3', 'Bank Quote', 'Receivables', 'Discount',
         'Payment Type', 'Bank Name', 'Account #', 'IFSC', 'Loan Application #',
         'Meter Category', 'EB Number', 'DTR Code', 'Sanctioned Load',
         'DISCOM Division', 'Net Metering', 'Vendor', 'Aadhar',
         'Application #', 'Application Date', 'Google Docs', 'Created At',
+        'Date', 'PO No', 'Bill No', 'Internal Remarks'
     ];
     const rows = customers.map(c => {
         const tagLabel = FINANCIAL_TAGS.find(f => f.id === c.financial_tag)?.label || c.financial_tag || '';
@@ -71,7 +72,7 @@ export function exportAllToCSV(customers) {
             c.full_installation_address || '', c.company_branch || '', c.system_capacity_kwp || '',
             c.project_type || '', c.poc || '',
             PRIMARY_STAGES.find(s => s.id === c.stage)?.label || c.stage || '',
-            tagLabel, c.quoted_amount || '', c.quoted_amount_2 || '', c.quote_to_bank || '',
+            tagLabel, c.quoted_amount || '', c.quoted_amount_2 || '', c.quoted_amount_3 || '', c.quote_to_bank || '',
             c.receivables || '', c.discount || '',
             c.payment_type || '', c.bank_name || '', c.bank_account_number || '',
             c.ifsc_code || '', c.loan_application_number || '', c.meter_category || '',
@@ -80,7 +81,14 @@ export function exportAllToCSV(customers) {
             c.aadhar || '', c.application_number || '', c.application_date || '',
             c.google_docs || '',
             c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN') : '',
-        ].join(',');
+            c.date || '', c.po_no || '', c.bill_no || '', c.internal_remarks || '',
+        ].map(val => {
+            const strVal = String(val);
+            if (strVal.includes(',') || strVal.includes('"') || strVal.includes('\n')) {
+                return `"${strVal.replace(/"/g, '""')}"`;
+            }
+            return strVal;
+        }).join(',');
     });
     const csv = [headers.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

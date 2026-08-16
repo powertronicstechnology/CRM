@@ -13,6 +13,7 @@ import { PRIMARY_STAGES } from '../constants';
 
 import DashboardView       from './DashboardView';
 import FinancialView       from './FinancialView';
+import SubsidyView         from './SubsidyView';
 import CustomerCard        from './CustomerCard';
 import CustomerDetailModal from './CustomerDetailModal';
 import AddLeadModal        from './AddLeadModal';
@@ -23,7 +24,7 @@ import AgentForm           from './agentform';
 
 import {
     LayoutDashboard, IndianRupee, Activity, UserCog, Menu, X,
-    Search, Plus, Download, LogOut, Sun, Trash2, Users,
+    Search, Plus, Download, LogOut, Sun, Trash2, Users, Banknote,
 } from 'lucide-react';
 
 const MONTHS = [
@@ -44,7 +45,6 @@ export default function Dashboard({ user, onLogout }) {
     const [sidebarOpen, setSidebarOpen]     = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [showAddLead, setShowAddLead]     = useState(false);
-    const [selectedYear, setSelectedYear]   = useState('All');
     const [selectedMonth, setSelectedMonth] = useState('All');
     const globalSearchRef                   = useRef(null);
     const meta = useMetadata();
@@ -178,23 +178,13 @@ export default function Dashboard({ user, onLogout }) {
         return null;
     };
 
-    // Apply Year and Month filtering
+    // Apply Month filtering
     const filteredActive = active.filter(c => {
-        const year = getYearFromCustomer(c);
-        const matchesYear = selectedYear === 'All' || year === Number(selectedYear);
-
+        if (selectedMonth === 'All') return true;
         const dateStr = c.date || c.created_at;
-        let matchesMonth = true;
-        if (selectedMonth !== 'All') {
-            if (!dateStr) {
-                matchesMonth = false;
-            } else {
-                const date = new Date(dateStr);
-                matchesMonth = !isNaN(date.getTime()) && date.getMonth() === Number(selectedMonth);
-            }
-        }
-
-        return matchesYear && matchesMonth;
+        if (!dateStr) return false;
+        const date = new Date(dateStr);
+        return !isNaN(date.getTime()) && date.getMonth() === Number(selectedMonth);
     });
 
     const stageCounts = PRIMARY_STAGES.reduce((acc, s) => {
@@ -203,7 +193,11 @@ export default function Dashboard({ user, onLogout }) {
     }, {});
     const generalFinCount = filteredActive.filter(c => c.financial_tag && !String(c.project_type || 'General').toLowerCase().includes('surya') && isAuthorized(c)).length;
     const pmSuryaFinCount = filteredActive.filter(c => c.financial_tag && String(c.project_type || '').toLowerCase().includes('surya') && isAuthorized(c)).length;
-    const trashCount        = trashed.length;
+    const subsidyCount    = filteredActive.filter(c => {
+        if (c.deleted_at) return false;
+        return (Array.isArray(c.subsidy_history) && c.subsidy_history.length > 0) || c.subsidy_claim || c.subsidy_received;
+    }).length;
+    const trashCount      = trashed.length;
 
     // Per-stage filtered cards
     const filtered = filteredActive.filter(c => {
@@ -245,6 +239,7 @@ export default function Dashboard({ user, onLogout }) {
     const headerTitle =
         currentView === 'dashboard' ? 'Business Dashboard'
         : currentView === 'financial' ? `Financial Tags (${financialProjectType === 'General' ? 'General' : 'PM SURYA'})`
+        : currentView === 'subsidy'   ? 'Subsidy Overview'
         : currentView === 'activity'  ? 'Activity Log'
         : currentView === 'users'     ? 'User Management'
         : currentView === 'trash'     ? 'Trash'
@@ -299,6 +294,18 @@ export default function Dashboard({ user, onLogout }) {
                                 </span>
                             )}
                         </button>
+
+                        {/* Subsidy Tab */}
+                        <button onClick={() => { setCurrentView('subsidy'); setSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold mb-1 transition-colors ${currentView === 'subsidy' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'}`}>
+                            <Banknote className="w-4 h-4 flex-shrink-0" />
+                            <span className="flex-1 text-left">Subsidy</span>
+                            {subsidyCount > 0 && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold ${currentView === 'subsidy' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
+                                    {subsidyCount}
+                                </span>
+                            )}
+                        </button>
                     </div>
 
                     {/* Project Stages */}
@@ -349,6 +356,18 @@ export default function Dashboard({ user, onLogout }) {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {/* Month Selector directly in main header */}
+                        <select
+                            value={selectedMonth}
+                            onChange={e => setSelectedMonth(e.target.value)}
+                            className="bg-stone-100 hover:bg-stone-200/80 text-stone-700 text-xs font-semibold px-3 py-2 rounded-xl border border-transparent focus:outline-none focus:ring-2 focus:ring-amber-300 transition-all cursor-pointer"
+                        >
+                            <option value="All">All Months</option>
+                            {MONTHS.map((m, idx) => (
+                                <option key={idx} value={idx}>{m}</option>
+                            ))}
+                        </select>
+
                         {/* ── Global search (always visible) ── */}
                         <div className="relative" ref={globalSearchRef}>
                             <Search className="absolute left-3 top-2.5 text-stone-400 w-4 h-4" />
@@ -408,64 +427,10 @@ export default function Dashboard({ user, onLogout }) {
 
                 {/* View router */}
                 <div className="flex-1 p-4 lg:p-6">
-                    {/* Year & Month Filter Bar */}
-                    {['dashboard', 'financial', 'stages'].includes(currentView) && (
-                        <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-2xl border border-stone-100 shadow-sm mb-6 transition-all duration-200">
-                            {/* Year Selector */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Year</span>
-                                <div className="flex bg-stone-100 p-1 rounded-xl gap-1">
-                                    {['All', '2026', '2027'].map(yr => (
-                                        <button
-                                            key={yr}
-                                            onClick={() => setSelectedYear(yr)}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                                                selectedYear === yr
-                                                    ? 'bg-stone-900 text-white shadow-sm'
-                                                    : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'
-                                            }`}
-                                        >
-                                            {yr === 'All' ? 'All Years' : yr}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Separator */}
-                            <div className="h-6 w-px bg-stone-200 hidden sm:block" />
-
-                            {/* Month Selector */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">Month</span>
-                                <select
-                                    value={selectedMonth}
-                                    onChange={e => setSelectedMonth(e.target.value)}
-                                    className="bg-stone-100 hover:bg-stone-200/80 text-stone-700 text-xs font-semibold px-3 py-2 rounded-xl border border-transparent focus:outline-none focus:ring-2 focus:ring-amber-300 transition-all cursor-pointer"
-                                >
-                                    <option value="All">All Months</option>
-                                    {MONTHS.map((m, idx) => (
-                                        <option key={idx} value={idx}>{m}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Clear Filters Button */}
-                            {(selectedYear !== 'All' || selectedMonth !== 'All') && (
-                                <button
-                                    onClick={() => {
-                                        setSelectedYear('All');
-                                        setSelectedMonth('All');
-                                    }}
-                                    className="text-xs text-amber-600 hover:text-amber-700 font-bold ml-auto transition-colors px-3 py-1.5 hover:bg-amber-50 rounded-lg"
-                                >
-                                    Clear Filters
-                                </button>
-                            )}
-                        </div>
-                    )}
 
                     {currentView === 'dashboard' && <DashboardView customers={filteredActive} loading={loading} />}
                     {currentView === 'financial' && <FinancialView customers={filteredActive} onSelectCustomer={setSelectedCustomer} projectType={financialProjectType} />}
+                    {currentView === 'subsidy'   && <SubsidyView customers={filteredActive} onSelectCustomer={setSelectedCustomer} />}
                     {currentView === 'activity'  && <ActivityLogView />}
                     {currentView === 'users' && user.userType === 'admin' && <UserManagementView currentUser={user} />}
 

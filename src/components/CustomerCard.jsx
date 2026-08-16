@@ -54,53 +54,39 @@ export default function CustomerCard({ customer, onSelect, onMoveStage }) {
                     )}
                 </div>
 
-                {/* Main details list */}
-                <div className="space-y-2 mb-4 text-[13px] text-stone-600 font-medium">
+                {/* Details side-by-side in a 2-column grid */}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-stone-600 font-medium mb-4 pt-3 border-t border-stone-100">
                     {customer.phone_number && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-stone-400 text-sm">📞</span>
-                            <span>{customer.phone_number}</span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-stone-400 text-xs">📞</span>
+                            <span className="truncate">{customer.phone_number}</span>
                         </div>
                     )}
                     {customer.area && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
                             <MapPin size={12} className="text-stone-400 flex-shrink-0" />
-                            <span>Area: <strong className="text-stone-800 font-bold">{customer.area}</strong></span>
+                            <span className="truncate">Area: <strong className="text-stone-800 font-bold">{customer.area}</strong></span>
+                        </div>
+                    )}
+                    {customer.panel && (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <Sun size={12} className="text-amber-400 flex-shrink-0" />
+                            <span className="truncate">Panel: <strong className="text-stone-700 font-semibold">{customer.panel}</strong></span>
+                        </div>
+                    )}
+                    {customer.inverter && (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <Cpu size={12} className="text-stone-400 flex-shrink-0" />
+                            <span className="truncate">Inverter: <strong className="text-stone-700 font-semibold">{customer.inverter}</strong></span>
                         </div>
                     )}
                 </div>
-
-                {/* Hardware components section with top divider */}
-                {(customer.panel || customer.inverter) && (
-                    <div className="pt-3 border-t border-stone-100 flex flex-col gap-2 text-xs text-stone-500 mb-4">
-                        {customer.panel && (
-                            <div className="flex items-center gap-2">
-                                <Sun size={12} className="text-amber-400 flex-shrink-0" />
-                                <span>Panel: <strong className="text-stone-700 font-semibold">{customer.panel}</strong></span>
-                            </div>
-                        )}
-                        {customer.inverter && (
-                            <div className="flex items-center gap-2">
-                                <Cpu size={12} className="text-stone-400 flex-shrink-0" />
-                                <span>Inverter: <strong className="text-stone-700 font-semibold">{customer.inverter}</strong></span>
-                            </div>
-                        )}
-                    </div>
-                )}
 
                 {/* Vendor details */}
                 {customer.vendor && (
                     <div className="flex items-center gap-2 text-xs text-stone-400 font-semibold">
                         <Package size={12} className="text-stone-300 flex-shrink-0" />
                         <span>Vendor: <strong className="text-stone-500 font-semibold">{customer.vendor}</strong></span>
-                    </div>
-                )}
-                {customer.google_docs && (
-                    <div className="mb-3" onClick={e => e.stopPropagation()}>
-                        <a href={customer.google_docs} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-2 py-1 rounded-full font-medium transition-colors">
-                            <FolderOpen className="w-3 h-3" /> Docs
-                        </a>
                     </div>
                 )}
             </div>
@@ -146,24 +132,42 @@ export default function CustomerCard({ customer, onSelect, onMoveStage }) {
 
                 {/* Stage move dropdown */}
                 <div className="px-4 pb-4 pt-2 border-t border-stone-100">
-                    <div className="relative" ref={dropdownRef}>
-                        <button onClick={() => setShowStageMenu(!showStageMenu)}
-                            className="w-full flex items-center justify-between bg-white hover:bg-stone-100 border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-600 font-semibold transition-colors">
-                            <span className="truncate">{PRIMARY_STAGES.find(s => s.id === customer.stage)?.label || customer.stage || 'Move to Stage'}</span>
-                            <ChevronDown className={`w-4 h-4 flex-shrink-0 ml-1 transition-transform ${showStageMenu ? 'rotate-180' : ''}`} />
-                        </button>
-                        {showStageMenu && (
-                            <div className="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-xl shadow-xl border border-stone-100 py-1 z-20 max-h-64 overflow-y-auto">
-                                {PRIMARY_STAGES.map(stage => (
-                                    <button key={stage.id}
-                                        onClick={() => { onMoveStage(customer.id, stage.id); setShowStageMenu(false); }}
-                                        className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-stone-50 transition-colors ${customer.stage === stage.id ? 'bg-amber-50 font-bold text-amber-700' : 'text-stone-600'}`}>
-                                        <stage.icon className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
-                                        {stage.label}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                    <div className="flex gap-2">
+                        <div className="relative flex-1" ref={dropdownRef}>
+                            <button onClick={() => setShowStageMenu(!showStageMenu)}
+                                className="w-full flex items-center justify-between bg-white hover:bg-stone-100 border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-600 font-semibold transition-colors">
+                                <span className="truncate">{PRIMARY_STAGES.find(s => s.id === customer.stage)?.label || customer.stage || 'Move to Stage'}</span>
+                                <ChevronDown className={`w-4 h-4 flex-shrink-0 ml-1 transition-transform ${showStageMenu ? 'rotate-180' : ''}`} />
+                            </button>
+                            {showStageMenu && (
+                                <div className="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-xl shadow-xl border border-stone-100 py-1 z-20 max-h-64 overflow-y-auto">
+                                    {PRIMARY_STAGES.map(stage => (
+                                        <button key={stage.id}
+                                            onClick={() => { onMoveStage(customer.id, stage.id); setShowStageMenu(false); }}
+                                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-stone-50 transition-colors ${customer.stage === stage.id ? 'bg-amber-50 font-bold text-amber-700' : 'text-stone-600'}`}>
+                                            <stage.icon className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
+                                            {stage.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {/* Next Stage Arrow Button */}
+                        {(() => {
+                            const currentIndex = PRIMARY_STAGES.findIndex(s => s.id === customer.stage);
+                            const nextStage = currentIndex !== -1 && currentIndex < PRIMARY_STAGES.length - 1 ? PRIMARY_STAGES[currentIndex + 1] : null;
+                            return (
+                                <button
+                                    type="button"
+                                    disabled={!nextStage}
+                                    onClick={() => nextStage && onMoveStage(customer.id, nextStage.id)}
+                                    title={nextStage ? `Move to next stage: ${nextStage.label}` : 'Already at the final stage'}
+                                    className="px-3 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all font-bold text-sm"
+                                >
+                                    <span className="leading-none">→</span>
+                                </button>
+                            );
+                        })()}
                     </div>
                 </div>
             </div>
