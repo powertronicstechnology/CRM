@@ -201,7 +201,7 @@ function EditableDetailItem({ label, field, value, onChange, type = 'text', isMo
 }
 
 // ─── Standalone Sequential Payments Manager ──────────────────────────────────
-function PaymentsManager({ payments = [], onSavePayments, saving = false, projectType = 'General', receivables = 0, meta = {} }) {
+function PaymentsManager({ payments = [], onSavePayments, saving = false, projectType = 'General', receivables = 0, totalReceived = 0, meta = {} }) {
     const maxPayments = String(projectType || '').toLowerCase().includes('surya') ? 5 : 3;
     const [addingMethod, setAddingMethod] = useState(false);
     const [newMethod, setNewMethod] = useState('');
@@ -238,8 +238,8 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
 
     // Filter valid saved payments
     const savedPayments = payments.filter(p => p && p.amount !== '' && p.amount !== null && p.amount !== undefined);
-    const totalReceived = savedPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-    const isFullyPaid = Number(receivables) === 0 && (totalReceived > 0 || savedPayments.length > 0);
+    const backendTotalReceived = Number(totalReceived) || 0;
+    const isFullyPaid = Number(receivables) === 0 && (backendTotalReceived > 0 || savedPayments.length > 0);
 
     // Save a new payment slot (e.g. Payment 1, Payment 2)
     const handleSaveNewPayment = async () => {
@@ -528,7 +528,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                     <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">Total Received (Auto-Sum)</p>
                     <p className="text-xs text-emerald-600">Calculated across {savedPayments.length} recorded installment{savedPayments.length !== 1 ? 's' : ''}</p>
                 </div>
-                <p className="text-base font-extrabold text-emerald-700">₹{totalReceived.toLocaleString('en-IN')}</p>
+                <p className="text-base font-extrabold text-emerald-700">₹{backendTotalReceived.toLocaleString('en-IN')}</p>
             </div>
         </div>
     );
@@ -536,10 +536,30 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
 
 // ─── Subsidy Status Tags (Applied, Claimed, Returned, Received) ───────────────
 const SUBSIDY_STATUS_OPTIONS = [
-    { id: 'Applied', dateField: null, classes: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300' },
-    { id: 'Claimed', dateField: 'subsidy_claim', classes: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300' },
-    { id: 'Returned', dateField: null, classes: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300' },
-    { id: 'Received', dateField: 'subsidy_received', classes: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300' },
+    {
+        id: 'Applied',
+        dateField: null,
+        classes: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300',
+        selected: 'bg-blue-100 border-blue-400 text-blue-800'
+    },
+    {
+        id: 'Claimed',
+        dateField: 'subsidy_claim',
+        classes: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300',
+        selected: 'bg-amber-100 border-amber-400 text-amber-800'
+    },
+    {
+        id: 'Returned',
+        dateField: null,
+        classes: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300',
+        selected: 'bg-rose-100 border-rose-400 text-rose-800'
+    },
+    {
+        id: 'Received',
+        dateField: 'subsidy_received',
+        classes: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300',
+        selected: 'bg-emerald-100 border-emerald-400 text-emerald-800'
+    },
 ];
 
 // ─── CustomerDetailModal ──────────────────────────────────────────────────────
@@ -551,6 +571,10 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
     const [commentText, setCommentText] = useState('');
     const [saving, setSaving] = useState(false);
     const [savingPayments, setSavingPayments] = useState(false);
+    const [pendingSubsidyStatus, setPendingSubsidyStatus] = useState('');
+    const [pendingSubsidyDate, setPendingSubsidyDate] = useState(getTodayDateString());
+    const [pendingSubsidyRemark, setPendingSubsidyRemark] = useState('');
+    const [savingSubsidy, setSavingSubsidy] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
     const isAdmin = user?.userType === 'admin';
@@ -582,6 +606,9 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         });
         setLocalChecklist(normalizeChecklist(customer.project_checklist, customer));
         fetchLogs();
+        setPendingSubsidyStatus('');
+        setPendingSubsidyDate(getTodayDateString());
+        setPendingSubsidyRemark('');
     }, [customer.id]);
 
     useEffect(() => {
@@ -599,106 +626,65 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         });
     }, [customer.project_checklist, customer.payments, customer.follow_ups, customer.subsidy_history, customer.stage_remarks]);
 
-    // ── Auto-recalculate financials & determine latest payment receipt date & auto tag ──
-    const recalcFinancials = (patch, current) => {
-        const merged = { ...current, ...patch };
-        const quoted = Number(merged.quoted_amount_3) || 0;
-        const discount = Number(merged.discount) || 0;
-
-        let received = 0;
-        let latestPaymentDate = merged.payment_reciept || null;
-
-        if (Array.isArray(merged.payments)) {
-            received = merged.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-            const nonZeroPayments = merged.payments.filter(p => p && (Number(p.amount) > 0 || p.date));
-            if (nonZeroPayments.length > 0) {
-                const lastP = nonZeroPayments[nonZeroPayments.length - 1];
-                if (lastP && lastP.date) {
-                    latestPaymentDate = lastP.date;
-                }
-            }
-        } else {
-            received = Number(merged.total_received) || 0;
-        }
-
-        const receivables = Math.max(0, quoted - discount - received);
-
-        const result = {
-            ...patch,
-            total_received: received,
-            receivables,
-            total_cost: quoted,
-            payment_reciept: latestPaymentDate,
-        };
-
-        // Automate financial tag transition when receivable reaches zero
-        if (receivables === 0 && (received > 0 || quoted > 0)) {
-            const isSurya = String(merged.project_type || '').toLowerCase().includes('surya');
-            result.financial_tag = isSurya
-                ? 'Final payment after meter installation'
-                : 'Final payment';
-        }
-
-        return result;
-    };
-
+    // ── Financial values are calculated by the Supabase backend trigger.
+    // The modal only edits raw financial/payment fields.
     const handleChange = (field, val) => {
-        const FINANCE_FIELDS = ['quoted_amount_3', 'discount'];
-        if (FINANCE_FIELDS.includes(field)) {
-            setEditData(prev => {
-                const patch = recalcFinancials({ [field]: val }, prev);
-                return { ...prev, ...patch };
-            });
-        } else {
-            setEditData(prev => {
-                const updated = { ...prev, [field]: val };
-                if (field === 'project_type') {
-                    const isZero = Number(prev.receivables) === 0 && (Number(prev.total_received) > 0 || Number(prev.quoted_amount_3) > 0);
-                    if (isZero) {
-                        const isSurya = String(val).toLowerCase().includes('surya');
-                        updated.financial_tag = isSurya ? 'Final payment after meter installation' : 'Final payment';
-                    } else {
-                        updated.financial_tag = "";
-                    }
-                }
-                return updated;
-            });
-        }
+        setEditData(prev => ({
+            ...prev,
+            [field]: val
+        }));
     };
 
-    // Live update for payments
     const handlePaymentsChange = (newPayments) => {
-        setEditData(prev => {
-            const patch = recalcFinancials({ payments: newPayments }, prev);
-            return { ...prev, ...patch };
-        });
+        setEditData(prev => ({
+            ...prev,
+            payments: newPayments
+        }));
     };
 
-    // Direct save for payments
     const handleSavePayments = async (customPayments) => {
         setSavingPayments(true);
-        const paymentsToSave = customPayments || editData.payments || [];
-        const patch = recalcFinancials({ payments: paymentsToSave }, editData);
 
+        const paymentsToSave = customPayments || editData.payments || [];
         const updates = {
-            payments: paymentsToSave,
-            total_received: patch.total_received,
-            receivables: patch.receivables,
-            payment_reciept: patch.payment_reciept,
-            financial_tag: patch.financial_tag,
+            payments: paymentsToSave
         };
 
-        // Map flat columns
         for (let k = 1; k <= 5; k++) {
             const p = (paymentsToSave || [])[k - 1];
-            updates[`payment_${k}`] = p ? (p.amount !== '' && p.amount !== null && p.amount !== undefined ? Number(p.amount) : null) : null;
-            updates[`payment_remark_${k}`] = p ? (p.remark || null) : null;
-            updates[`payment_date_${k}`] = p ? (p.date || null) : null;
+
+            updates[`payment_${k}`] =
+                p && p.amount !== '' && p.amount !== null && p.amount !== undefined
+                    ? Number(p.amount)
+                    : null;
+
+            updates[`payment_remark_${k}`] =
+                p ? (p.remark || null) : null;
+
+            updates[`payment_date_${k}`] =
+                p ? (p.date || null) : null;
         }
 
-        setEditData(prev => ({ ...prev, ...patch, ...updates }));
         await onUpdate(customer.id, updates);
-        await logActivity(user.id, 'update', `${customer.customer_name}: Payments updated (Total: ₹${Number(patch.total_received || 0).toLocaleString('en-IN')})`, customer.id);
+
+        const receivedForLog = paymentsToSave.reduce(
+            (sum, p) => sum + (Number(p?.amount) || 0),
+            0
+        );
+
+        await logActivity(
+            user.id,
+            'update',
+            `${customer.customer_name}: Payments updated (Total: ₹${receivedForLog.toLocaleString('en-IN')})`,
+            customer.id
+        );
+
+        setEditData(prev => ({
+            ...prev,
+            ...updates,
+            payments: paymentsToSave
+        }));
+
         setSavingPayments(false);
         fetchLogs();
     };
@@ -753,25 +739,69 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         fetchLogs();
     };
 
-    // ── Subsidy tag buttons: Applied, Claimed, Returned, Received ──
-    const handleSubsidyStatusClick = async (status) => {
+    const handleSubsidyStatusClick = (status) => {
         const opt = SUBSIDY_STATUS_OPTIONS.find(o => o.id === status);
-        const today = getTodayDateString();
-        const entry = { status, date: today, author: user.name };
-        const updatedHistory = [...(editData.subsidy_history || []), entry];
-        const patch = { subsidy_history: updatedHistory };
-        if (opt?.dateField) patch[opt.dateField] = today;
+        setPendingSubsidyStatus(status);
 
-        setEditData(prev => ({ ...prev, ...patch }));
-        await onUpdate(customer.id, patch);
-        await logActivity(user.id, 'update', `${customer.customer_name}: Subsidy ${status}`, customer.id);
-        fetchLogs();
+        const existingDate = opt?.dateField
+            ? editData[opt.dateField]
+            : null;
+
+        setPendingSubsidyDate(existingDate || getTodayDateString());
+        setPendingSubsidyRemark('');
     };
 
-    const handleSubsidyDateChange = async (field, val) => {
-        setEditData(prev => ({ ...prev, [field]: val }));
-        await onUpdate(customer.id, { [field]: val });
-        await logActivity(user.id, 'update', `${customer.customer_name}: ${field.replace(/_/g, ' ').toUpperCase()} set to ${formatDate(val)}`, customer.id);
+    const handleSaveSubsidy = async () => {
+        if (!pendingSubsidyStatus || savingSubsidy) return;
+
+        setSavingSubsidy(true);
+
+        const opt = SUBSIDY_STATUS_OPTIONS.find(
+            o => o.id === pendingSubsidyStatus
+        );
+
+        const timestamp = new Date().toISOString();
+
+        const entry = {
+            status: pendingSubsidyStatus,
+            date: pendingSubsidyDate || getTodayDateString(),
+            remark: pendingSubsidyRemark.trim(),
+            author: user?.name || 'Unknown',
+            created_at: timestamp
+        };
+
+        const updatedHistory = [
+            ...(editData.subsidy_history || []),
+            entry
+        ];
+
+        const patch = {
+            subsidy_history: updatedHistory
+        };
+
+        if (opt?.dateField) {
+            patch[opt.dateField] =
+                pendingSubsidyDate || getTodayDateString();
+        }
+
+        await onUpdate(customer.id, patch);
+
+        await logActivity(
+            user.id,
+            'update',
+            `${customer.customer_name}: Subsidy ${pendingSubsidyStatus}`,
+            customer.id
+        );
+
+        setEditData(prev => ({
+            ...prev,
+            ...patch
+        }));
+
+        setPendingSubsidyStatus('');
+        setPendingSubsidyDate(getTodayDateString());
+        setPendingSubsidyRemark('');
+        setSavingSubsidy(false);
         fetchLogs();
     };
 
@@ -820,6 +850,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                     {[
                         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
                         { id: 'finance', label: 'Finance & Bank', icon: IndianRupee },
+                        { id: 'subsidy', label: 'Subsidy', icon: Banknote },
                         { id: 'checklist', label: 'Checklist', icon: CheckSquare },
                         { id: 'history', label: 'Notes & History', icon: History },
                     ].map(tab => (
@@ -932,12 +963,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                     <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">Project Type</label>
                                     <select value={editData.project_type || 'General'} onChange={async (e) => {
                                         const newType = e.target.value;
-                                        const isZero = Number(editData.receivables) === 0 && (Number(editData.total_received) > 0 || Number(editData.quoted_amount_3) > 0);
-                                        const newTag = isZero
-                                            ? (String(newType).toLowerCase().includes('surya') ? 'Final payment after meter installation' : 'Final payment')
-                                            : '';
-                                        setEditData(prev => ({ ...prev, project_type: newType, financial_tag: newTag }));
-                                        await onUpdate(customer.id, { project_type: newType, financial_tag: newTag });
+                                        setEditData(prev => ({ ...prev, project_type: newType }));
+                                        await onUpdate(customer.id, { project_type: newType });
                                         await logActivity(user.id, 'update', `${customer.customer_name}: Project Type changed to ${newType}`, customer.id);
                                         fetchLogs();
                                     }} className="w-full p-2 bg-white border border-stone-200 rounded-lg font-semibold text-xs text-stone-700 outline-none">
@@ -1021,52 +1048,211 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 saving={savingPayments}
                                 projectType={editData.project_type}
                                 receivables={editData.receivables}
+                                totalReceived={editData.total_received}
                                 meta={meta}
                             />
 
-                            {/* Subsidy — dates side by side + one-tap status tags */}
+                        </div>
+                    )}
+
+                    {/* ── SUBSIDY ── */}
+                    {activeTab === 'subsidy' && (
+                        <div className="space-y-4 animate-in fade-in duration-300">
+
                             <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
-                                <div className="flex items-center gap-2 mb-2 border-b border-stone-100 pb-1 mt-1">
-                                    <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
-                                        <Banknote size={13} /> Subsidy Status
+                                <div className="flex items-center gap-2 mb-3 border-b border-stone-100 pb-2">
+                                    <Banknote size={13} className="text-stone-400" />
+                                    <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">
+                                        Subsidy Status
                                     </h3>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2.5 mb-2.5">
-                                    <div className="bg-stone-50 py-1 px-2.5 rounded-xl border border-stone-100">
-                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Subsidy Claim</p>
-                                        <input type="date" value={editData.subsidy_claim || ''}
-                                            onChange={e => handleSubsidyDateChange('subsidy_claim', e.target.value)}
-                                            className="w-full bg-transparent text-xs font-semibold text-stone-800 outline-none" />
-                                    </div>
-                                    <div className="bg-stone-50 py-1 px-2.5 rounded-xl border border-stone-100">
-                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Subsidy Received</p>
-                                        <input type="date" value={editData.subsidy_received || ''}
-                                            onChange={e => handleSubsidyDateChange('subsidy_received', e.target.value)}
-                                            className="w-full bg-transparent text-xs font-semibold text-stone-800 outline-none" />
-                                    </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {SUBSIDY_STATUS_OPTIONS.map(opt => {
+                                        const isSelected = pendingSubsidyStatus === opt.id;
+
+                                        return (
+                                            <button
+                                                key={opt.id}
+                                                type="button"
+                                                onClick={() => handleSubsidyStatusClick(opt.id)}
+                                                className={`py-2 px-2.5 rounded-lg text-xs font-bold border transition-all text-center ${
+                                                    isSelected
+                                                        ? opt.selected
+                                                        : opt.classes
+                                                }`}
+                                            >
+                                                {opt.id}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2.5">
-                                    {SUBSIDY_STATUS_OPTIONS.map(opt => (
-                                        <button key={opt.id} type="button" onClick={() => handleSubsidyStatusClick(opt.id)}
-                                            className={`py-1.5 px-2.5 rounded-lg text-xs font-bold border transition-colors text-center shadow-sm ${opt.classes}`}>
-                                            {opt.id}
-                                        </button>
-                                    ))}
-                                </div>
+                                {pendingSubsidyStatus && (
+                                    <div className="mt-3 pt-3 border-t border-stone-100 space-y-2.5">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                            <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
+                                                <label className="text-[10px] text-stone-400 uppercase tracking-wider mb-1 block font-bold">
+                                                    Date
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={pendingSubsidyDate}
+                                                    onChange={e => setPendingSubsidyDate(e.target.value)}
+                                                    className="w-full bg-transparent text-xs font-semibold text-stone-800 outline-none"
+                                                />
+                                            </div>
 
-                                <div className="space-y-1 mt-2 pt-2 border-t border-stone-100">
-                                    {(editData.subsidy_history || []).length === 0 && (
-                                        <p className="text-xs text-stone-400 italic">No subsidy history recorded</p>
-                                    )}
-                                    {(editData.subsidy_history || []).slice().reverse().map((h, i) => (
-                                        <div key={i} className="flex items-center justify-between bg-stone-50 px-2.5 py-1.5 rounded-lg text-xs border border-stone-100">
-                                            <span className="font-bold text-stone-700">{h.status}</span>
-                                            <span className="text-stone-400">{h.date ? formatDate(h.date) : ''} · {h.author}</span>
+                                            <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
+                                                <label className="text-[10px] text-stone-400 uppercase tracking-wider mb-1 block font-bold">
+                                                    Remark (Optional)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={pendingSubsidyRemark}
+                                                    onChange={e => setPendingSubsidyRemark(e.target.value)}
+                                                    placeholder="Add a remark..."
+                                                    className="w-full bg-transparent text-xs font-semibold text-stone-800 outline-none placeholder:text-stone-300"
+                                                />
+                                            </div>
                                         </div>
-                                    ))}
+
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveSubsidy}
+                                            disabled={savingSubsidy}
+                                            className="w-full bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                                        >
+                                            <Save size={13} />
+                                            {savingSubsidy
+                                                ? 'Saving Subsidy Status...'
+                                                : `Save ${pendingSubsidyStatus} Status`
+                                            }
+                                        </button>
+
+                                        <p className="text-[10px] text-stone-400 text-center">
+                                            Changes are only added to subsidy history after saving.
+                                        </p>
+                                    </div>
+                                )}
+                            </section>
+
+                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                                <div className="flex items-center justify-between mb-3 border-b border-stone-100 pb-2">
+                                    <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">
+                                        Current Dates
+                                    </h3>
+                                    <span className="text-[10px] text-stone-400">
+                                        Saved values
+                                    </span>
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
+                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
+                                            Subsidy Claim
+                                        </p>
+                                        <p className="text-sm font-semibold text-stone-800">
+                                            {editData.subsidy_claim
+                                                ? formatDate(editData.subsidy_claim)
+                                                : '–'
+                                            }
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
+                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
+                                            Subsidy Received
+                                        </p>
+                                        <p className="text-sm font-semibold text-stone-800">
+                                            {editData.subsidy_received
+                                                ? formatDate(editData.subsidy_received)
+                                                : '–'
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 border-b border-stone-100 pb-2">
+                                    Subsidy History
+                                </h3>
+
+                                {(editData.subsidy_history || []).length === 0 ? (
+                                    <p className="text-xs text-stone-400 italic">
+                                        No subsidy history recorded
+                                    </p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {(editData.subsidy_history || [])
+                                            .slice()
+                                            .reverse()
+                                            .map((h, i) => {
+                                                const remark = h.remark || h.note || '';
+
+                                                return (
+                                                    <details
+                                                        key={`${h.date || 'date'}-${h.status || 'status'}-${i}`}
+                                                        className="bg-stone-50 rounded-xl border border-stone-100 overflow-hidden"
+                                                    >
+                                                        <summary className="cursor-pointer list-none px-3 py-2.5 flex items-center justify-between gap-3">
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <span className="font-bold text-xs text-stone-700">
+                                                                    {h.status || 'Status'}
+                                                                </span>
+
+                                                                {remark && (
+                                                                    <span className="text-[10px] text-stone-400 truncate">
+                                                                        · {remark}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            <span className="text-[10px] text-stone-400 flex-shrink-0">
+                                                                {h.date ? formatDate(h.date) : '–'}
+                                                            </span>
+                                                        </summary>
+
+                                                        <div className="px-3 pb-3 pt-2 border-t border-stone-100 space-y-2">
+                                                            <div>
+                                                                <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider">
+                                                                    Date
+                                                                </p>
+                                                                <p className="text-xs font-semibold text-stone-700 mt-0.5">
+                                                                    {h.date ? formatDate(h.date) : '–'}
+                                                                </p>
+                                                            </div>
+
+                                                            <div>
+                                                                <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider">
+                                                                    By
+                                                                </p>
+                                                                <p className="text-xs font-semibold text-stone-700 mt-0.5">
+                                                                    {h.author || 'Unknown'}
+                                                                </p>
+                                                            </div>
+
+                                                            <div>
+                                                                <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider">
+                                                                    Remark
+                                                                </p>
+                                                                {remark ? (
+                                                                    <p className="text-xs text-stone-700 mt-0.5 whitespace-pre-wrap break-words">
+                                                                        {remark}
+                                                                    </p>
+                                                                ) : (
+                                                                    <p className="text-xs text-stone-400 italic mt-0.5">
+                                                                        No remark added
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </details>
+                                                );
+                                            })}
+                                    </div>
+                                )}
                             </section>
                         </div>
                     )}
