@@ -104,7 +104,7 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
     if (!isEditing) {
         return (
             <div className="bg-stone-50 py-1.5 px-3 rounded-xl">
-                <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
+                <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
                 <p className="text-sm font-semibold truncate text-stone-800">{value || '–'}</p>
             </div>
         );
@@ -113,7 +113,7 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
     if (adding) {
         return (
             <div className="bg-stone-50 py-1.5 px-3 rounded-xl space-y-1">
-                <p className="text-[10px] text-stone-400 uppercase tracking-wider font-bold">{label} — New</p>
+                <p className="text-xs text-stone-400 uppercase tracking-wider font-bold">{label} — New</p>
                 <div className="flex gap-1">
                     <input autoFocus value={newVal} onChange={e => setNewVal(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAdd()}
@@ -128,7 +128,7 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
 
     return (
         <div className="bg-stone-50 py-1.5 px-3 rounded-xl">
-            <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
+            <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
             <div className="flex gap-1">
                 <select value={value || ''} onChange={e => onChange(field, e.target.value)}
                     className="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300">
@@ -155,9 +155,9 @@ function DetailItem({ label, value, isMoney = false, isEnergy = false, noTruncat
         if (found) displayVal = found.label;
     }
     return (
-        <div className={`bg-stone-50 py-2 px-3.5 rounded-xl ${className}`}>
-            <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
-            <p className={`text-sm font-semibold ${noTruncate ? 'break-words whitespace-pre-wrap' : 'truncate'} ${isMoney ? 'text-emerald-600' : isEnergy ? 'text-amber-600' : 'text-stone-800'}`}>
+        <div className={`bg-stone-50 py-3 px-4 rounded-2xl ${className}`}>
+            <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
+            <p className={`text-base font-semibold ${noTruncate ? 'break-words whitespace-pre-wrap' : 'truncate'} ${isMoney ? 'text-emerald-600' : isEnergy ? 'text-amber-600' : 'text-stone-800'}`}>
                 {isMoney ? fmt(value) : displayVal}
             </p>
         </div>
@@ -175,7 +175,7 @@ function EditableDetailItem({ label, field, value, onChange, type = 'text', isMo
     if (!isEditing) return <DetailItem label={label} value={value} isMoney={isMoney} isEnergy={isEnergy} noTruncate={noTruncate} className={className} type={type} options={options} />;
     return (
         <div className={`bg-stone-50 py-1.5 px-3 rounded-xl ${className}`}>
-            <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
+            <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
             {options ? (
                 <select value={value || ''} onChange={e => onChange(field, e.target.value)} disabled={disabled}
                     className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50">
@@ -310,7 +310,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                         <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider">
                             Payment Records ({String(projectType || '').toLowerCase().includes('surya') ? 'Max 5' : 'Max 3'})
                         </h4>
-                        <p className="text-[10px] text-stone-400">
+                        <p className="text-xs text-stone-400">
                             {isFullyPaid ? 'Account fully settled' : `Recorded ${savedPayments.length} of ${maxPayments} installments`}
                         </p>
                     </div>
@@ -326,7 +326,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                         return (
                             <div key={i} className="bg-amber-50/50 rounded-xl p-3.5 border border-amber-200 space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-md">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-md">
                                         Editing Payment {p.no || i + 1}
                                     </span>
                                     <button
@@ -385,13 +385,13 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                     return (
                         <div key={i} className="flex items-center justify-between p-3 bg-stone-100/70 hover:bg-stone-100 rounded-xl border border-stone-200/60 transition-colors">
                             <div className="flex items-center gap-3 flex-wrap">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-700 bg-stone-200/80 px-2 py-0.5 rounded-md">
+                                <span className="text-xs font-bold uppercase tracking-wider text-stone-700 bg-stone-200/80 px-2 py-0.5 rounded-md">
                                     Payment {p.no || i + 1}
                                 </span>
                                 <span className="text-sm font-extrabold text-stone-900">
                                     ₹{Number(p.amount || 0).toLocaleString('en-IN')}
                                 </span>
-                                <span className="text-[11px] font-bold text-stone-600 bg-stone-200/60 px-2 py-0.5 rounded-md uppercase">
+                                <span className="text-xs font-bold text-stone-600 bg-stone-200/60 px-2 py-0.5 rounded-md uppercase">
                                     {p.remark || 'ONL'}
                                 </span>
                                 <span className="text-xs text-stone-500 font-medium">
@@ -425,10 +425,10 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                 {canShowNextSlot && (
                     <div className="bg-stone-50/90 rounded-xl p-4 border border-stone-200 space-y-3.5 mt-2">
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-2.5 py-0.5 rounded-md">
+                            <span className="text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-2.5 py-0.5 rounded-md">
                                 Payment {savedPayments.length + 1}
                             </span>
-                            <span className="text-[10px] text-stone-400 font-medium">Enter details and save to lock</span>
+                            <span className="text-xs text-stone-400 font-medium">Enter details and save to lock</span>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -526,7 +526,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
             {/* Total Received Summary */}
             <div className="bg-emerald-50/70 rounded-xl p-3.5 flex justify-between items-center border border-emerald-100 mt-2">
                 <div>
-                    <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">Total Received (Auto-Sum)</p>
+                    <p className="text-xs font-bold text-emerald-800 uppercase tracking-wide">Total Received (Auto-Sum)</p>
                     <p className="text-xs text-emerald-600">Calculated across {savedPayments.length} recorded installment{savedPayments.length !== 1 ? 's' : ''}</p>
                 </div>
                 <p className="text-base font-extrabold text-emerald-700">₹{backendTotalReceived.toLocaleString('en-IN')}</p>
@@ -825,7 +825,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
     };
 
     const SectionHeader = ({ title, id, icon: Icon, hideEdit = false }) => (
-        <div className="flex items-center justify-between mb-3 border-b border-stone-100 pb-1.5 mt-6">
+        <div className="flex items-center justify-between mb-2 border-b border-stone-100 pb-1.5">
             <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
                 <Icon size={13} /> {title}
             </h3>
@@ -843,22 +843,22 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
     return (
         <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-5xl h-[94vh] overflow-hidden flex flex-col border border-stone-100">
+            <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-[1170px] h-[min(832px,92dvh)] overflow-hidden flex flex-col border border-stone-100">
 
                 {/* Header (Original clean format) */}
                 <div className="bg-stone-900 px-6 py-4 flex justify-between items-center flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-xl font-bold text-white">{customer.customer_name}</h2>
-                        <span className="text-[10px] bg-white/10 text-stone-400 px-2 py-0.5 rounded font-bold uppercase tracking-widest">{customer.crn || 'NO-CRN'}</span>
+                    <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <h2 className="text-xl font-bold text-white leading-snug break-words">{customer.customer_name}</h2>
+                        <span className="text-xs bg-white/10 text-stone-400 px-2 py-0.5 rounded font-bold uppercase tracking-widest">{customer.crn || 'NO-CRN'}</span>
                     </div>
                     <div className="flex gap-2">
                         {isAdmin && <button onClick={() => setShowDeleteConfirm(true)} className="p-2 text-white/30 hover:text-red-400"><Trash2 size={18} /></button>}
-                        <button onClick={onClose} className="p-2 text-white/30 hover:text-white"><X size={24} /></button>
+                        <button onClick={onClose} aria-label="Close customer details" className="p-2 text-white/30 hover:text-white"><X size={20} /></button>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex bg-stone-900 px-6 gap-6 border-t border-white/5 flex-shrink-0">
+                <div className="flex bg-stone-900 px-6 gap-6 border-t border-white/5 flex-shrink-0 overflow-x-auto">
                     {[
                         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
                         { id: 'finance', label: 'Finance & Bank', icon: IndianRupee },
@@ -867,23 +867,23 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                         { id: 'history', label: 'Notes & History', icon: History },
                     ].filter(tab => tab.id === 'finance' || tab.id === 'subsidy' ? access.finance : access.crm).map(tab => (
                         <button key={tab.id} onClick={() => { setActiveTab(tab.id); setEditingSection(null); }}
-                            className={`flex items-center gap-2 py-3 text-[11px] font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id ? 'text-amber-400 border-amber-400' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
+                            className={`flex shrink-0 items-center gap-2 py-3 text-xs font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id ? 'text-amber-400 border-amber-400' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
                             <tab.icon size={12} /> {tab.label}
                         </button>
                     ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 bg-[#FCFBFA]">
+                <div className="flex-1 min-h-0 overflow-y-auto p-5 bg-[#FCFBFA]">
                     {saveError && <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">{saveError}</p>}
 
                     {/* ── OVERVIEW ── */}
                     {activeTab === 'overview' && (
-                        <div className="space-y-3 animate-in fade-in duration-300">
+                        <div className="space-y-4 animate-in fade-in duration-300">
                             {/* Top bar: Stage control (left) + Comments (right) */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
                                 {/* Stage select */}
-                                <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm flex flex-col justify-between">
-                                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">Primary Stage</label>
+                                <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm flex flex-col justify-between">
+                                    <label className="text-xs text-stone-400 font-bold uppercase mb-1 block">Primary Stage</label>
                                     <div className="flex gap-2">
                                         <select value={editData.stage} onChange={async (e) => {
                                             const newStage = e.target.value;
@@ -922,8 +922,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 </div>
 
                                 {/* Centralized comment box */}
-                                <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm flex flex-col justify-between">
-                                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 flex items-center gap-1">
+                                <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm flex flex-col justify-between">
+                                    <label className="text-xs text-stone-400 font-bold uppercase mb-1 flex items-center gap-1">
                                         <MessageSquare size={11} /> Add Comment
                                     </label>
                                     <div className="flex gap-2">
@@ -940,9 +940,9 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                             </div>
 
                             {/* Customer Info */}
-                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                            <section className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
                                 <SectionHeader title="Customer Info" id="cus" icon={User} />
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                     <EditableDetailItem label="Customer Name" field="customer_name" value={editData.customer_name} onChange={handleChange} isEditing={editingSection === 'cus'} />
                                     <EditableDetailItem label="Phone Number" field="phone_number" value={editData.phone_number} onChange={handleChange} isEditing={editingSection === 'cus'} />
                                     <EditableDetailItem label="AREA" field="area" value={editData.area} onChange={handleChange} isEditing={editingSection === 'cus'} />
@@ -951,9 +951,9 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                             </section>
 
                             {/* Project & Technical */}
-                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                            <section className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
                                 <SectionHeader title="Project & Technical" id="pro" icon={Zap} />
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     <EditableDetailItem label="System Capacity (kWp)" field="system_capacity_kwp" value={editData.system_capacity_kwp} onChange={handleChange} type="number" isEnergy isEditing={editingSection === 'pro'} />
                                     {access.finance && <EditableDetailItem label="PO No" field="po_no" value={editData.po_no} onChange={handleChange} isEditing={editingSection === 'pro'} />}
                                     <EditableDetailItem label="APPLICATION NO" field="application_no" value={editData.application_no} onChange={handleChange} isEditing={editingSection === 'pro'} />
@@ -971,10 +971,10 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                     {/* ── FINANCE & BANK ── */}
                     {activeTab === 'finance' && (
                         <div className="space-y-4 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
                                 {/* Project Type */}
-                                <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm">
-                                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">Project Type</label>
+                                <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
+                                    <label className="text-xs text-stone-400 font-bold uppercase mb-1 block">Project Type</label>
                                     <select value={editData.project_type || 'General'} onChange={async (e) => {
                                         const newType = e.target.value;
                                         setEditData(prev => ({ ...prev, project_type: newType }));
@@ -988,8 +988,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 </div>
 
                                 {/* Financial Tag */}
-                                <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm">
-                                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">Financial Tag</label>
+                                <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
+                                    <label className="text-xs text-stone-400 font-bold uppercase mb-1 block">Financial Tag</label>
                                     <select value={editData.financial_tag || ''} onChange={async (e) => {
                                         const newTag = e.target.value;
                                         setEditData(prev => ({ ...prev, financial_tag: newTag }));
@@ -1005,11 +1005,11 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 </div>
                             </div>
 
-                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                            <section className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
                                 <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
 
                                 {/* Row 1: Quoted (editable), Received (Read-Only), Receivable (Read-Only) */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                                     <EditableDetailItem
                                         label="Quoted Amt"
                                         field="quoted_amount_3"
@@ -1020,19 +1020,19 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                         isMoney
                                     />
                                     <div className="bg-stone-50 py-1.5 px-3 rounded-xl border border-stone-100/80">
-                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Received (Auto)</p>
+                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Received (Auto)</p>
                                         <p className="text-sm font-semibold text-emerald-600">
                                             {fmt(editData.total_received)}
                                         </p>
                                     </div>
                                     <div className={`py-1.5 px-3 rounded-xl border ${Number(editData.receivables) === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-stone-50 border-stone-100/80 text-stone-800'}`}>
-                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Receivable (Auto)</p>
+                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Receivable (Auto)</p>
                                         <div className="flex items-center justify-between">
                                             <p className="text-sm font-semibold">
                                                 {fmt(editData.receivables)}
                                             </p>
                                             {Number(editData.receivables) === 0 && (
-                                                <span className="flex items-center gap-1 text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+                                                <span className="flex items-center gap-1 text-xs font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
                                                     <CheckCircle2 size={10} /> Fully Paid
                                                 </span>
                                             )}
@@ -1040,11 +1040,11 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 pt-2.5 border-t border-stone-100">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2.5 border-t border-stone-100">
                                     <EditableDetailItem label="Date" field="date" value={editData.date} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
                                     <EditableDetailItem label="Bill No" field="bill_no" value={editData.bill_no} onChange={handleChange} isEditing={editingSection === 'fin'} />
                                     <div className="bg-stone-50 py-1.5 px-3 rounded-xl border border-stone-100/80">
-                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
+                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
                                             Payment Receipt Date (Auto)
                                         </p>
                                         <p className="text-sm font-semibold text-stone-800">
@@ -1073,7 +1073,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                     {activeTab === 'subsidy' && (
                         <div className="space-y-4 animate-in fade-in duration-300">
 
-                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                            <section className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3 border-b border-stone-100 pb-2">
                                     <Banknote size={13} className="text-stone-400" />
                                     <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">
@@ -1104,9 +1104,9 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
                                 {pendingSubsidyStatus && (
                                     <div className="mt-3 pt-3 border-t border-stone-100 space-y-2.5">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
-                                                <label className="text-[10px] text-stone-400 uppercase tracking-wider mb-1 block font-bold">
+                                                <label className="text-xs text-stone-400 uppercase tracking-wider mb-1 block font-bold">
                                                     Date
                                                 </label>
                                                 <input
@@ -1118,7 +1118,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                             </div>
 
                                             <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
-                                                <label className="text-[10px] text-stone-400 uppercase tracking-wider mb-1 block font-bold">
+                                                <label className="text-xs text-stone-400 uppercase tracking-wider mb-1 block font-bold">
                                                     Remark (Optional)
                                                 </label>
                                                 <input
@@ -1144,26 +1144,26 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                             }
                                         </button>
 
-                                        <p className="text-[10px] text-stone-400 text-center">
+                                        <p className="text-xs text-stone-400 text-center">
                                             Changes are only added to subsidy history after saving.
                                         </p>
                                     </div>
                                 )}
                             </section>
 
-                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                            <section className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
                                 <div className="flex items-center justify-between mb-3 border-b border-stone-100 pb-2">
                                     <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">
                                         Current Dates
                                     </h3>
-                                    <span className="text-[10px] text-stone-400">
+                                    <span className="text-xs text-stone-400">
                                         Saved values
                                     </span>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2.5">
+                                <div className="grid grid-cols-2 gap-3">
                                     <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
-                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
+                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
                                             Subsidy Claim
                                         </p>
                                         <p className="text-sm font-semibold text-stone-800">
@@ -1175,7 +1175,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                     </div>
 
                                     <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
-                                        <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
+                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
                                             Subsidy Received
                                         </p>
                                         <p className="text-sm font-semibold text-stone-800">
@@ -1188,7 +1188,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 </div>
                             </section>
 
-                            <section className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                            <section className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
                                 <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 border-b border-stone-100 pb-2">
                                     Subsidy History
                                 </h3>
@@ -1217,13 +1217,13 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                                 </span>
 
                                                                 {remark && (
-                                                                    <span className="text-[10px] text-stone-400 truncate">
+                                                                    <span className="text-xs text-stone-400 truncate">
                                                                         · {remark}
                                                                     </span>
                                                                 )}
                                                             </div>
 
-                                                            <span className="text-[10px] text-stone-400 flex-shrink-0">
+                                                            <span className="text-xs text-stone-400 flex-shrink-0">
                                                                 {h.date ? formatDate(h.date) : '–'}
                                                             </span>
                                                         </summary>
@@ -1273,7 +1273,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
                     {/* ── CHECKLIST ── */}
                     {activeTab === 'checklist' && (
-                        <div className="space-y-3 animate-in fade-in duration-300">
+                        <div className="space-y-4 animate-in fade-in duration-300">
                             {checklistDirty && (
                                 <div className="flex items-center justify-between bg-amber-50/60 p-3 px-4 rounded-xl border border-amber-100 mb-3">
                                     <span className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
@@ -1303,7 +1303,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
                             {/* Add Custom Item Section */}
                             <div className="bg-white p-4 rounded-xl border border-stone-100 shadow-sm mb-3">
-                                <h4 className="text-[10px] font-bold text-stone-400 mb-2.5 uppercase tracking-widest border-b border-stone-50 pb-1.5">Add Custom Checklist Item</h4>
+                                <h4 className="text-xs font-bold text-stone-400 mb-2.5 uppercase tracking-widest border-b border-stone-50 pb-1.5">Add Custom Checklist Item</h4>
                                 <div className="flex gap-2">
                                     <input type="text" placeholder="e.g. Verify solar net meter application..." value={newItemLabel}
                                         onChange={e => setNewItemLabel(e.target.value)}
@@ -1330,7 +1330,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                             <div className="space-y-3">
                                 {sections.map(sec => (
                                     <div key={sec} className="bg-white p-4 rounded-xl border border-stone-100 shadow-sm">
-                                        <h4 className="text-[10px] font-bold text-stone-400 mb-3 uppercase tracking-widest border-b border-stone-50 pb-1.5">{sec}</h4>
+                                        <h4 className="text-xs font-bold text-stone-400 mb-3 uppercase tracking-widest border-b border-stone-50 pb-1.5">{sec}</h4>
                                         <div className="flex flex-col gap-2">
                                             {localChecklist.filter(i => i.section === sec).map(item => (
                                                 <div key={item.id} className="py-1.5 px-3 bg-stone-50/50 rounded-xl border border-stone-100 hover:border-stone-200 transition-all flex items-center justify-between gap-3">
@@ -1341,25 +1341,25 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                         }} className="mt-0.5 rounded border-stone-300 text-amber-500 focus:ring-amber-500 cursor-pointer" />
                                                         <div className="flex-1 min-w-0">
                                                             <span className={`text-xs block font-semibold ${item.checked ? 'text-stone-400 line-through font-normal' : 'text-stone-700'}`}>{item.label}</span>
-                                                            {item.checked && <span className="text-[10px] text-stone-400 font-bold uppercase mt-0.5 block">By {item.checkedBy} on {formatLogDate(item.checkedAt)}</span>}
+                                                            {item.checked && <span className="text-xs text-stone-400 font-bold uppercase mt-0.5 block">By {item.checkedBy} on {formatLogDate(item.checkedAt)}</span>}
                                                         </div>
                                                     </label>
 
-                                                    <div className="flex items-center gap-2 text-[11px] flex-shrink-0">
+                                                    <div className="flex items-center gap-2 text-xs flex-shrink-0">
                                                         {(item.id === 'panel_and_inverter' || item.id === 'fabrication_and_wiring') ? (
                                                             editingRemarkId === item.id ? (
                                                                 <div className="flex gap-1.5 items-center">
                                                                     <input type="text" placeholder="Remark..." defaultValue={item.remark || ''}
                                                                         id={`remark_input_${item.id}`}
-                                                                        className="bg-white border border-stone-200 rounded-lg px-2 py-1 text-[11px] outline-none focus:ring-1 focus:ring-amber-300 w-32 sm:w-40" />
+                                                                        className="bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-amber-300 w-32 sm:w-40" />
                                                                     <button onClick={() => {
                                                                         const val = document.getElementById(`remark_input_${item.id}`).value.trim();
                                                                         const updated = localChecklist.map(i => i.id === item.id ? { ...i, remark: val } : i);
                                                                         setLocalChecklist(updated);
                                                                         setChecklistDirty(true);
                                                                         setEditingRemarkId(null);
-                                                                    }} className="bg-stone-900 text-white px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-stone-800 transition-colors">Done</button>
-                                                                    <button onClick={() => setEditingRemarkId(null)} className="text-stone-400 hover:text-stone-600 text-[10px] font-medium">Cancel</button>
+                                                                    }} className="bg-stone-900 text-white px-2 py-1 rounded-lg text-xs font-bold hover:bg-stone-800 transition-colors">Done</button>
+                                                                    <button onClick={() => setEditingRemarkId(null)} className="text-stone-400 hover:text-stone-600 text-xs font-medium">Cancel</button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex items-center gap-2">
@@ -1414,9 +1414,9 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-6">Activity Notes</h3>
                                 <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2">
                                     {(editData.follow_ups || []).slice().reverse().map((f, i) => (
-                                        <div key={i} className="bg-white p-3.5 rounded-xl border border-stone-100 shadow-sm">
+                                        <div key={i} className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
                                             <p className="text-xs text-stone-800 leading-relaxed">{f.text}</p>
-                                            <div className="flex justify-between mt-2.5 text-[10px] text-stone-400 font-bold uppercase">
+                                            <div className="flex justify-between mt-2.5 text-xs text-stone-400 font-bold uppercase">
                                                 <span>{f.author}</span><span>{formatLogDate(f.date)}</span>
                                             </div>
                                         </div>
@@ -1439,10 +1439,10 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                     {activityLogs.length > 0 ? activityLogs.map((log, i) => (
                                         <div key={i} className="relative pl-6 pb-4 border-l border-stone-100 last:border-0">
                                             <div className="absolute -left-[4.5px] top-0 w-2 h-2 rounded-full bg-white border-2 border-amber-500 shadow-sm" />
-                                            <div className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm -mt-1.5 hover:border-amber-200 transition-colors">
+                                            <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm -mt-1.5 hover:border-amber-200 transition-colors">
                                                 <div className="flex justify-between items-start mb-1.5">
-                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase ${ACTION_COLORS[log.action] || 'bg-stone-100 text-stone-600'}`}>{log.action}</span>
-                                                    <span className="text-[10px] text-stone-400 font-bold">{formatLogDate(log.created_at)}</span>
+                                                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold uppercase ${ACTION_COLORS[log.action] || 'bg-stone-100 text-stone-600'}`}>{log.action}</span>
+                                                    <span className="text-xs text-stone-400 font-bold">{formatLogDate(log.created_at)}</span>
                                                 </div>
                                                 <div className="text-xs text-stone-700 font-medium whitespace-pre-wrap leading-relaxed">
                                                     {log.message.includes('|') ? (
@@ -1453,7 +1453,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                         </div>
                                                     ) : log.message}
                                                 </div>
-                                                <p className="text-[10px] text-stone-400 font-bold uppercase mt-2 border-t border-stone-50 pt-1.5">User: {log.profiles?.name || 'System'}</p>
+                                                <p className="text-xs text-stone-400 font-bold uppercase mt-2 border-t border-stone-50 pt-1.5">User: {log.profiles?.name || 'System'}</p>
                                             </div>
                                         </div>
                                     )) : <p className="text-xs text-stone-400 italic">No timeline entries found.</p>}

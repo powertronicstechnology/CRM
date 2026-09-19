@@ -84,7 +84,7 @@ export default function LoginScreen({ onLogin }) {
                 <div className="w-16 h-16 bg-amber-500 rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-lg shadow-amber-200">
                     <Sun size={32} />
                 </div>
-                <h1 className="text-2xl font-bold text-stone-800 tracking-tight">Watersun</h1>
+                <h1 className="text-2xl font-bold text-stone-800 tracking-tight">POWERTRONICS</h1>
                 <p className="text-stone-400 font-medium text-xs mb-10 mt-1">Administrative Management Portal</p>
 
                 {!showForgot ? (

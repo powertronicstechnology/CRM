@@ -8,11 +8,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
-import { logActivity, useMetadata, exportAllToCSV } from '../utils';
+import { logActivity, useMetadata } from '../utils';
 import { PRIMARY_STAGES } from '../constants';
 import { permissionsFor } from '../access';
 import { editablePatch, recordRequest } from '../records';
 
+import ExportView from './ExportView';
 import DashboardView       from './DashboardView';
 import FinancialView       from './FinancialView';
 import SubsidyView         from './SubsidyView';
@@ -233,7 +234,8 @@ export default function Dashboard({ user, onLogout }) {
     // ── Role-based routing ────────────────────────────────────────────────────
 
     const headerTitle =
-        currentView === 'dashboard' ? 'Business Dashboard'
+        currentView === 'export' ? 'Export Records'
+        : currentView === 'dashboard' ? 'Business Dashboard'
         : currentView === 'financial' ? `Financial Tags (${financialProjectType === 'General' ? 'General' : 'PM SURYA'})`
         : currentView === 'subsidy'   ? 'Subsidy Overview'
         : currentView === 'activity'  ? 'Activity Log'
@@ -253,7 +255,7 @@ export default function Dashboard({ user, onLogout }) {
                             <Sun size={20} />
                         </div>
                         <div>
-                            <h1 className="text-sm font-bold text-stone-800">SolarFlow</h1>
+                            <h1 className="text-sm font-bold text-stone-800">POWERTRONICS</h1>
                             <p className="text-[9px] text-stone-400 font-bold uppercase tracking-widest">Portal</p>
                         </div>
                     </div>
@@ -262,6 +264,7 @@ export default function Dashboard({ user, onLogout }) {
 
                 <div className="flex-1 overflow-y-auto p-3">
                     <NavBtn view="dashboard" icon={LayoutDashboard} label="Dashboard" count={0} />
+                    <NavBtn view="export" icon={Download} label="Export Records" count={0} />
 
                     {/* Financial */}
                     {access.finance && <div className="mt-4 mb-1">
@@ -342,7 +345,7 @@ export default function Dashboard({ user, onLogout }) {
             </aside>
 
             {/* ── Main ── */}
-            <main className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+            <main className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
                 {/* Header */}
                 <header className="h-16 bg-white/90 backdrop-blur-md border-b border-stone-100 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30">
                     <div className="flex items-center gap-3">
@@ -410,8 +413,9 @@ export default function Dashboard({ user, onLogout }) {
 
                         {(access.crm || access.finance) && (
                             <>
-                                <button onClick={() => exportAllToCSV(filteredActive)}
-                                    className="flex items-center gap-1.5 border border-stone-200 text-stone-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-stone-50 transition-colors">
+                                <button onClick={() => setCurrentView('export')}
+                                    title="Choose sheets and preview your Excel export"
+                                    className="flex items-center gap-1.5 border border-stone-200 text-stone-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-stone-50 transition-colors disabled:opacity-50 disabled:cursor-wait">
                                     <Download className="w-4 h-4" />
                                     <span className="hidden sm:inline text-xs">Export</span>
                                 </button>
@@ -429,6 +433,7 @@ export default function Dashboard({ user, onLogout }) {
                 <div className="flex-1 p-4 lg:p-6">
                     {dataError && <div role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{dataError}<button onClick={() => fetchData()} className="ml-3 underline">Retry</button></div>}
 
+                    {currentView === 'export' && <ExportView key={user.userType} records={active} filteredRecords={filteredActive} userType={user.userType} monthLabel={selectedMonth === 'All' ? 'All months' : MONTHS[Number(selectedMonth)]} disabled={loading || !!dataError} />}
                     {currentView === 'dashboard' && <DashboardView customers={filteredActive} loading={loading} access={access} />}
                     {currentView === 'financial' && access.finance && <FinancialView customers={filteredActive} onSelectCustomer={setSelectedCustomer} projectType={financialProjectType} />}
                     {currentView === 'subsidy' && access.finance && <SubsidyView customers={filteredActive} onSelectCustomer={setSelectedCustomer} />}
@@ -452,7 +457,7 @@ export default function Dashboard({ user, onLogout }) {
                                 <div className="w-8 h-8 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" />
                             </div>
                         ) : filtered.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5">
                                 {filtered.map(c => (
                                     <CustomerCard canSeeFinance={access.finance} key={c.id} customer={c} onSelect={setSelectedCustomer} onMoveStage={handleMoveStage} />
                                 ))}
