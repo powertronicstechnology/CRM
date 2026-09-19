@@ -1,8 +1,8 @@
 // ─── DashboardView.jsx ────────────────────────────────────────────────────────
 // Metrics overview: project counts, financial summary, stage pipeline bar chart.
 // • "Total" = all non-deleted records
-// • "Live"  = non-deleted AND stage !== 'Completed'
-// • "Completed" = stage === 'Completed' (non-deleted)
+// • "Live"  = non-deleted AND stage !== 'SUBSIDY AMOUNT DISBURSED'
+// • "Completed" = stage === 'SUBSIDY AMOUNT DISBURSED' (non-deleted)
 // Numbers use Indian locale (₹1,00,000)
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ const MetricBox = ({ label, value, sub, icon: Icon, color }) => {
     );
 };
 
-export default function DashboardView({ customers = [], loading }) {
+export default function DashboardView({ customers = [], loading, access }) {
     if (loading) return (
         <div className="p-20 text-center text-stone-400 font-medium italic animate-pulse">
             Calculating solar metrics...
@@ -43,8 +43,8 @@ export default function DashboardView({ customers = [], loading }) {
     const active = customers.filter(c => !c.deleted_at);
 
     const totalProjects   = active.length;
-    const completedCount  = active.filter(c => c.stage === 'Completed').length;
-    const liveProjects    = active.filter(c => c.stage !== 'Completed').length;
+    const completedCount  = active.filter(c => c.stage === 'SUBSIDY AMOUNT DISBURSED').length;
+    const liveProjects    = active.filter(c => c.stage !== 'SUBSIDY AMOUNT DISBURSED').length;
 
     const totalQuoted    = active.reduce((s, c) => s + (Number(c.quoted_amount || c.total_cost)   || 0), 0);
     const totalReceived  = active.reduce((s, c) => s + (Number(c.total_received)  || 0), 0);
@@ -53,14 +53,14 @@ export default function DashboardView({ customers = [], loading }) {
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
             {/* Project counts */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {access.crm && <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <MetricBox label="Total Database" value={totalProjects}  icon={FolderOpen}   color="blue"    sub={`${active.length} active records`} />
                 <MetricBox label="Live Projects"  value={liveProjects}   icon={Activity}     color="amber"   sub="Excluding Completed" />
-                <MetricBox label="Completed"      value={completedCount} icon={CheckCircle2} color="emerald" sub="Fully commissioned" />
-            </div>
+                <MetricBox label="Completed"      value={completedCount} icon={CheckCircle2} color="emerald" sub="Subsidy amount disbursed" />
+            </div>}
 
             {/* Financial summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {access.finance && <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-[28px] border border-stone-100 shadow-sm">
                     <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1">Total Sales (Quoted)</p>
                     <p className="text-2xl font-bold text-stone-800">{fmtLakh(totalQuoted)}</p>
@@ -76,10 +76,10 @@ export default function DashboardView({ customers = [], loading }) {
                     <p className="text-2xl font-bold text-orange-600">{fmtLakh(totalDues)}</p>
                     <p className="text-xs text-stone-400 mt-1">₹{totalDues.toLocaleString('en-IN')}</p>
                 </div>
-            </div>
+            </div>}
 
             {/* Stage pipeline bar chart */}
-            <div className="bg-white rounded-[32px] p-8 border border-stone-100 shadow-sm">
+            {access.crm && <div className="bg-white rounded-[32px] p-8 border border-stone-100 shadow-sm">
                 <h3 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-8">Operational Density (Stage Breakdown)</h3>
                 <div className="space-y-5">
                     {PRIMARY_STAGES.map(stage => {
@@ -93,7 +93,7 @@ export default function DashboardView({ customers = [], loading }) {
                                 </div>
                                 <div className="h-1.5 bg-stone-50 rounded-full overflow-hidden">
                                     <div
-                                        className={`h-full transition-all duration-1000 rounded-full ${stage.id === 'Completed' ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                                        className={`h-full transition-all duration-1000 rounded-full ${stage.id === 'SUBSIDY AMOUNT DISBURSED' ? 'bg-emerald-400' : 'bg-amber-400'}`}
                                         style={{ width: `${perc}%` }}
                                     />
                                 </div>
@@ -101,7 +101,7 @@ export default function DashboardView({ customers = [], loading }) {
                         );
                     })}
                 </div>
-            </div>
+            </div>}
         </div>
     );
 }

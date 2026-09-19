@@ -9,7 +9,7 @@ import { Zap, MapPin, User, Building2, Package, FolderOpen, ChevronDown, Sun, Cp
 import { PRIMARY_STAGES, FINANCIAL_TAGS, FINANCIAL_TAG_COLORS } from '../constants';
 import { formatIndianCurrency } from '../utils';
 
-export default function CustomerCard({ customer, onSelect, onMoveStage }) {
+export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFinance = false }) {
     const [showStageMenu, setShowStageMenu] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -94,7 +94,7 @@ export default function CustomerCard({ customer, onSelect, onMoveStage }) {
             {/* Bottom strip — not clickable (stops propagation via parent) */}
             <div className="border-t border-stone-100 bg-stone-50/60 rounded-b-2xl" onClick={e => e.stopPropagation()}>
                 {/* Money bar */}
-                <div className="grid grid-cols-3 gap-0 divide-x divide-stone-100 px-1 py-3">
+                {canSeeFinance && <div className="grid grid-cols-3 gap-0 divide-x divide-stone-100 px-1 py-3">
                     <div className="text-center px-2">
                         <p className="text-[9px] font-bold text-stone-400 uppercase tracking-wide">Quoted</p>
                         <p className="text-xs font-bold text-stone-700 mt-0.5">{formatIndianCurrency(quotedAmt)}</p>
@@ -109,10 +109,10 @@ export default function CustomerCard({ customer, onSelect, onMoveStage }) {
                             {formatIndianCurrency(balance)}
                         </p>
                     </div>
-                </div>
+                </div>}
 
                 {/* Financial tag pill */}
-                {customer.financial_tag && (
+                {canSeeFinance && customer.financial_tag && (
                     <div className="px-4 pb-3 border-t border-stone-100 pt-2">
                         <span className={`inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase border ${tagColors.bg || 'bg-stone-50'} ${tagColors.text || 'text-stone-500'} ${tagColors.border || 'border-stone-200'}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${tagColors.dot || 'bg-stone-400'}`} />

@@ -11,7 +11,7 @@ import { ShieldCheck, Plus, RefreshCw, AlertTriangle, Eye, EyeOff, UserCog, X, K
 
 // ─── CreateUserModal ──────────────────────────────────────────────────────────
 function CreateUserModal({ onClose, onCreated, currentUser }) {
-    const [form, setForm] = useState({ name: '', email: '', password: '', role: 'Office', user_type: 'sales' });
+    const [form, setForm] = useState({ name: '', email: '', password: '', role: 'Staff', user_type: 'staff' });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [showPw, setShowPw] = useState(false);
@@ -57,38 +57,6 @@ function CreateUserModal({ onClose, onCreated, currentUser }) {
                 throw new Error(response.data.error);
             }
 
-            if (finalForm.user_type === 'agent' || finalForm.role === 'Channel Partners') {
-                const partnerName = finalForm.name;
-                const { data: existingMeta } = await supabase
-                    .from('metadata')
-                    .select('id')
-                    .eq('category', 'channel_partner')
-                    .eq('label', partnerName)
-                    .maybeSingle();
-
-                if (!existingMeta) {
-                    await supabase
-                        .from('metadata')
-                        .insert({ category: 'channel_partner', label: partnerName });
-                }
-            }
-
-            if (finalForm.user_type === 'vendor' || finalForm.role === 'Vendors') {
-                const vendorName = finalForm.name;
-                const vendorEmail = finalForm.email;
-                const { data: existingVendor } = await supabase
-                    .from('vendors')
-                    .select('id')
-                    .eq('email', vendorEmail)
-                    .maybeSingle();
-
-                if (!existingVendor) {
-                    await supabase
-                        .from('vendors')
-                        .insert({ name: vendorName, email: vendorEmail });
-                }
-            }
-
             logActivity(
                 currentUser.id,
                 'create',
@@ -96,6 +64,7 @@ function CreateUserModal({ onClose, onCreated, currentUser }) {
                 `${finalForm.role} (${finalForm.user_type})`
             );
 
+            if (response.data?.warning) window.alert(response.data.warning);
             onCreated();
         } catch (err) {
             setError(err.message || 'Failed to create user.');
@@ -145,7 +114,7 @@ function CreateUserModal({ onClose, onCreated, currentUser }) {
                     <div>
                         <label className="block text-xs font-medium text-stone-600 mb-1">Role *</label>
                         <select
-                            value={APP_ROLES.find(r => r.user_type === form.user_type)?.id || 'office'}
+                            value={APP_ROLES.find(r => r.user_type === form.user_type)?.id || 'staff'}
                             onChange={e => {
                                 const val = e.target.value;
                                 const selected = APP_ROLES.find(r => r.id === val);
@@ -482,7 +451,7 @@ export default function UserManagementView({ currentUser }) {
                                                 </span>
                                             ) : (
                                                 <select
-                                                    value={APP_ROLES.find(r => r.user_type === profile.user_type)?.id || 'office'}
+                                                    value={APP_ROLES.find(r => r.user_type === profile.user_type)?.id || 'staff'}
                                                     disabled={actionLoading === profile.id}
                                                     onChange={async (e) => {
                                                         const val = e.target.value;
@@ -496,41 +465,8 @@ export default function UserManagementView({ currentUser }) {
                                                             setProfiles(prev => prev.map(p => p.id === profile.id ? { ...p, user_type: selected.user_type, role: selected.role } : p));
                                                             logActivity(currentUser.id, 'update', `Updated role for ${profile.name} to ${selected.label}`, '');
 
-                                                            if (selected.user_type === 'agent' || selected.role === 'Channel Partners') {
-                                                                const partnerName = (profile.name || '').trim();
-                                                                if (partnerName) {
-                                                                    const { data: existingMeta } = await supabase
-                                                                        .from('metadata')
-                                                                        .select('id')
-                                                                        .eq('category', 'channel_partner')
-                                                                        .eq('label', partnerName)
-                                                                        .maybeSingle();
-
-                                                                    if (!existingMeta) {
-                                                                        await supabase
-                                                                            .from('metadata')
-                                                                            .insert({ category: 'channel_partner', label: partnerName });
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            if (selected.user_type === 'vendor' || selected.role === 'Vendors') {
-                                                                const vendorName = (profile.name || '').trim();
-                                                                const vendorEmail = (profile.email || '').trim();
-                                                                if (vendorName && vendorEmail) {
-                                                                    const { data: existingVendor } = await supabase
-                                                                        .from('vendors')
-                                                                        .select('id')
-                                                                        .eq('email', vendorEmail)
-                                                                        .maybeSingle();
-
-                                                                    if (!existingVendor) {
-                                                                        await supabase
-                                                                            .from('vendors')
-                                                                            .insert({ name: vendorName, email: vendorEmail });
-                                                                    }
-                                                                }
-                                                            }
+                                                        } else {
+                                                            showToast('error', error.message || 'Unable to update role');
                                                         }
                                                         setActionLoading(null);
                                                     }}

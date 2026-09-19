@@ -56,8 +56,4 @@ export const FINANCIAL_TAG_COLORS = {
 // Supabase metadata table categories (one per managed dropdown)
 export const META_CATEGORIES = ['panel', 'inverter', 'meter_phase', 'payment_method'];
 
-export const APP_ROLES = [
-    { id: 'admin', label: 'Admin', user_type: 'admin', role: 'Admin' },
-    { id: 'office', label: 'Office', user_type: 'sales', role: 'Office' },
-    { id: 'channel_partner', label: 'Channel Partners', user_type: 'agent', role: 'Channel Partners' },
-];
+export { APP_ROLES } from './access';

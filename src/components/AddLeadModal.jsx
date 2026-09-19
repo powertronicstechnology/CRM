@@ -6,11 +6,13 @@ import { useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import { DEFAULT_PROJECT_CHECKLIST } from '../models';
 
-export default function AddLeadModal({ onClose, onSave }) {
+export default function AddLeadModal({ onClose, onSave, canSeeFinance }) {
     const [form, setForm] = useState({
         customer_name: '',
         phone_number: '',
         area: '',
+        application_no: '',
+        subdivision: '',
         system_capacity_kwp: '',
         full_installation_address: '', // Full Address (optional)
         quoted_amount: '',
@@ -30,7 +32,6 @@ export default function AddLeadModal({ onClose, onSave }) {
             await onSave({
                 ...form,
                 quoted_amount: form.quoted_amount ? Number(form.quoted_amount) : null,
-                total_cost: form.quoted_amount ? Number(form.quoted_amount) : null,
                 system_capacity_kwp: form.system_capacity_kwp ? Number(form.system_capacity_kwp) : null,
                 payments: [],
                 follow_ups: [],
@@ -76,6 +77,18 @@ export default function AddLeadModal({ onClose, onSave }) {
                     </div>
 
                     <div>
+                        <label htmlFor="lead-application_no" className="block text-xs font-semibold text-stone-600 mb-1">Application No</label>
+                        <input id="lead-application_no" type="text" value={form.application_no} onChange={e => set('application_no', e.target.value)}
+                            className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                    </div>
+
+                    <div>
+                        <label htmlFor="lead-subdivision" className="block text-xs font-semibold text-stone-600 mb-1">Subdivision</label>
+                        <input id="lead-subdivision" type="text" value={form.subdivision} onChange={e => set('subdivision', e.target.value)}
+                            className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                    </div>
+
+                    <div>
                         <label className="block text-xs font-semibold text-stone-600 mb-1">Capacity (kWp)</label>
                         <input type="number" step="0.1" value={form.system_capacity_kwp} onChange={e => set('system_capacity_kwp', e.target.value)}
                             className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" placeholder="e.g. 5.5" />
@@ -87,11 +100,11 @@ export default function AddLeadModal({ onClose, onSave }) {
                             className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none" placeholder="e.g. 123 Main Street" />
                     </div>
 
-                    <div>
+                    {canSeeFinance && <div>
                         <label className="block text-xs font-semibold text-stone-600 mb-1">Quoted Amount (₹)</label>
                         <input type="number" value={form.quoted_amount} onChange={e => set('quoted_amount', e.target.value)}
                             className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300" placeholder="e.g. 150000" />
-                    </div>
+                    </div>}
 
                     <div>
                         <label className="block text-xs font-semibold text-stone-600 mb-1">Project Type *</label>

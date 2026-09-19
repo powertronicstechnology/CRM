@@ -62,7 +62,7 @@ export function exportAllToCSV(customers) {
         'Payment Type', 'Bank Name', 'Account #', 'IFSC', 'Loan Application #',
         'Meter Category', 'EB Number', 'DTR Code', 'Sanctioned Load',
         'DISCOM Division', 'Net Metering', 'Vendor', 'Aadhar',
-        'Application #', 'Application Date', 'Google Docs', 'Created At',
+        'Application #', 'Subdivision', 'Application Date', 'Google Docs', 'Created At',
         'Date', 'PO No', 'Bill No', 'Internal Remarks'
     ];
     const rows = customers.map(c => {
@@ -78,7 +78,7 @@ export function exportAllToCSV(customers) {
             c.ifsc_code || '', c.loan_application_number || '', c.meter_category || '',
             c.eb_number || '', c.dtr_code || '', c.sanctioned_load || '',
             c.discom_division || '', c.net_metering || '', c.vendor || '',
-            c.aadhar || '', c.application_number || '', c.application_date || '',
+            c.aadhar || '', c.application_no || c.application_number || '', c.subdivision || '', c.application_date || '',
             c.google_docs || '',
             c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN') : '',
             c.date || '', c.po_no || '', c.bill_no || '', c.internal_remarks || '',

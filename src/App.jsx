@@ -18,6 +18,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
+import { canEnterPortal } from './access';
 import { Sun } from 'lucide-react';
 import LoginScreen from './components/LoginScreen';
 import Dashboard   from './components/Dashboard';
@@ -32,7 +33,7 @@ export default function App() {
             if (session?.user) {
                 const { data: profile } = await supabase
                     .from('profiles').select('*').eq('id', session.user.id).single();
-                if (profile) {
+                if (canEnterPortal(profile)) {
                     setUser({
                         id: session.user.id,
                         email: session.user.email,
@@ -41,7 +42,7 @@ export default function App() {
                         userType: profile.user_type,
                     });
                 } else {
-                    // Profile missing — force sign out so login form shows
+                    // Missing, inactive or unsupported profile: never restore portal access.
                     await supabase.auth.signOut();
                 }
             }
@@ -56,6 +57,28 @@ export default function App() {
         return () => subscription.unsubscribe();
     }, []);
 
+    // Re-read authorization after role changes or deactivation, including old sessions.
+    useEffect(() => {
+        if (!user?.id) return;
+        let cancelled = false;
+        const refreshProfile = async () => {
+            const { data: profile, error } = await supabase.from('profiles')
+                .select('*').eq('id', user.id).single();
+            if (cancelled || error) return;
+            if (!canEnterPortal(profile)) {
+                await supabase.auth.signOut();
+                setUser(null);
+                return;
+            }
+            setUser(previous => previous && ({ ...previous, name: profile.name,
+                role: profile.role, userType: profile.user_type }));
+        };
+        const refresh = () => { refreshProfile().catch(() => {}); };
+        window.addEventListener('focus', refresh);
+        const timer = setInterval(refresh, 30000);
+        return () => { cancelled = true; clearInterval(timer); window.removeEventListener('focus', refresh); };
+    }, [user?.id]);
+
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-stone-900">
             <Sun className="animate-spin text-amber-500" size={40} />
@@ -65,6 +88,7 @@ export default function App() {
     return !user
         ? <LoginScreen onLogin={setUser} />
         : <Dashboard
+            key={`${user.id}:${user.userType}`}
             user={user}
             onLogout={async () => { await supabase.auth.signOut(); setUser(null); }}
           />;

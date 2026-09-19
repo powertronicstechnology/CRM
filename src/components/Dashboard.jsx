@@ -10,6 +10,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { logActivity, useMetadata, exportAllToCSV } from '../utils';
 import { PRIMARY_STAGES } from '../constants';
+import { permissionsFor } from '../access';
+import { editablePatch, recordRequest } from '../records';
 
 import DashboardView       from './DashboardView';
 import FinancialView       from './FinancialView';
@@ -20,7 +22,6 @@ import AddLeadModal        from './AddLeadModal';
 import ActivityLogView     from './ActivityLogView';
 import UserManagementView  from './UserManagementView';
 import TrashView           from './TrashView';
-import AgentForm           from './agentform';
 
 import {
     LayoutDashboard, IndianRupee, Activity, UserCog, Menu, X,
@@ -33,6 +34,8 @@ const MONTHS = [
 ];
 
 export default function Dashboard({ user, onLogout }) {
+    const access = permissionsFor(user.userType);
+    const [dataError, setDataError] = useState('');
     const [customers, setCustomers]         = useState([]);
     const [loading, setLoading]             = useState(true);
     const [currentView, setCurrentView]     = useState('dashboard');
@@ -50,22 +53,26 @@ export default function Dashboard({ user, onLogout }) {
     const meta = useMetadata();
 
     // ── Data fetching ──────────────────────────────────────────────────────────
-    const fetchData = async () => {
-        setLoading(true);
-        const { data, error } = await supabase
-            .from('admin').select('*').order('created_at', { ascending: false });
-        if (!error) setCustomers(data || []);
-        else console.error('Fetch error:', error);
-        setLoading(false);
+    const fetchData = async (quiet = false) => {
+        if (!quiet) setLoading(true);
+        try {
+            const data = await recordRequest('list');
+            setCustomers(data || []);
+            setDataError('');
+        } catch (error) {
+            setCustomers([]);
+            setSelectedCustomer(null);
+            setDataError(error.message);
+        } finally { setLoading(false); }
     };
 
     useEffect(() => {
         fetchData();
-        const channel = supabase.channel('admin_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'admin' }, fetchData)
-            .subscribe();
-        return () => supabase.removeChannel(channel);
-    }, []);
+        const refresh = () => { if (!document.hidden) fetchData(true); };
+        const timer = setInterval(refresh, 30000);
+        window.addEventListener('focus', refresh);
+        return () => { clearInterval(timer); window.removeEventListener('focus', refresh); };
+    }, [user.userType]);
 
     // Close global search dropdown when clicking outside
     useEffect(() => {
@@ -83,9 +90,7 @@ export default function Dashboard({ user, onLogout }) {
         const q = globalSearch.trim().toLowerCase();
         if (!q) { setGlobalResults([]); setShowGlobalDrop(false); return; }
         const active = customers.filter(c => !c.deleted_at);
-        const authorized = (user.userType === 'admin' || user.userType === 'sales')
-            ? active
-            : active.filter(c => c.poc === user.name);
+        const authorized = active;
         const results = authorized.filter(c =>
             c.customer_name?.toLowerCase().includes(q) ||
             String(c.phone_number || '').includes(globalSearch.trim()) ||
@@ -97,7 +102,7 @@ export default function Dashboard({ user, onLogout }) {
 
     const handleGlobalSelect = (customer) => {
         // Navigate to the customer's stage so context is clear
-        setCurrentView('stages');
+        setCurrentView(access.crm ? 'stages' : 'financial');
         setSelectedStage(customer.stage || 'Leads');
         setStageSearch('');
         // Open the detail modal
@@ -108,33 +113,30 @@ export default function Dashboard({ user, onLogout }) {
 
     // ── CRUD ──────────────────────────────────────────────────────────────────
     const handleUpdateCustomer = async (id, updates) => {
-        const { error } = await supabase.from('admin').update(updates).eq('id', id);
-        if (!error) {
-            setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
-            if (selectedCustomer?.id === id) setSelectedCustomer(prev => ({ ...prev, ...updates }));
+        try {
+            const original = customers.find(c => c.id === id);
+            const patch = editablePatch(user.userType, updates, original);
+            if (!Object.keys(patch).length) return;
+            const saved = await recordRequest('update', id, patch);
+            setCustomers(prev => prev.map(c => c.id === id ? saved : c));
+            setSelectedCustomer(prev => prev?.id === id ? saved : prev);
+        } catch (error) {
+            setDataError(error.message);
+            throw error;
         }
     };
 
-    // Soft-delete: sets deleted_at, never removes from DB
-    const handleSoftDelete = async (id, deletedAt) => {
-        const ts = deletedAt || new Date().toISOString();
-        await supabase.from('admin').update({ deleted_at: ts }).eq('id', id);
-        setCustomers(prev => prev.map(c => c.id === id ? { ...c, deleted_at: ts } : c));
+    const handleSoftDelete = async (id) => {
+        await recordRequest('trash', id);
         setSelectedCustomer(null);
+        await fetchData(true);
     };
-
-    // Recover from trash
     const handleRecover = async (id) => {
-        await supabase.from('admin').update({ deleted_at: null }).eq('id', id);
-        setCustomers(prev => prev.map(c => c.id === id ? { ...c, deleted_at: null } : c));
-        logActivity(user.id, 'update', `Recovered customer from trash`, id);
+        await recordRequest('restore', id);
+        await fetchData(true);
     };
-
-    // Hard-delete: permanent, admin only
     const handleHardDelete = async (id) => {
-        const c = customers.find(x => x.id === id);
-        await logActivity(user.id, 'delete', `Permanently deleted: ${c?.customer_name}`, id);
-        await supabase.from('admin').delete().eq('id', id);
+        await recordRequest('delete', id);
         setCustomers(prev => prev.filter(c => c.id !== id));
     };
 
@@ -147,12 +149,7 @@ export default function Dashboard({ user, onLogout }) {
     };
 
     const handleAddLead = async (data) => {
-        const leadData = { ...data, application_done_by: user.name, created_at: new Date().toISOString() };
-        const { error } = await supabase.from('admin').insert(leadData).select().single();
-        if (error) {
-            console.error('Error adding lead:', error);
-            throw new Error(error.message || 'Failed to add lead.');
-        }
+        await recordRequest('create', null, editablePatch(user.userType, data));
         logActivity(user.id, 'create', `Added new lead: ${data.customer_name}`, `Done by: ${user.name}`);
         setShowAddLead(false);
         fetchData();
@@ -161,7 +158,7 @@ export default function Dashboard({ user, onLogout }) {
     // ── Derived data (active = non-deleted only) ───────────────────────────────
     const active      = customers.filter(c => !c.deleted_at);
     const trashed     = customers.filter(c => !!c.deleted_at);
-    const isAuthorized = (c) => user.userType === 'admin' || user.userType === 'sales' || c.poc === user.name;
+    const isAuthorized = () => access.crm || access.finance;
 
     // Helper to get year from Customer: Checks crn for year ranges (e.g. 26-27 -> 2026, 27-28 -> 2027), falling back to date field or created_at
     const getYearFromCustomer = (c) => {
@@ -234,7 +231,6 @@ export default function Dashboard({ user, onLogout }) {
     };
 
     // ── Role-based routing ────────────────────────────────────────────────────
-    if (user.userType === 'agent') return <AgentForm user={user} onLogout={onLogout} />;
 
     const headerTitle =
         currentView === 'dashboard' ? 'Business Dashboard'
@@ -268,7 +264,7 @@ export default function Dashboard({ user, onLogout }) {
                     <NavBtn view="dashboard" icon={LayoutDashboard} label="Dashboard" count={0} />
 
                     {/* Financial */}
-                    <div className="mt-4 mb-1">
+                    {access.finance && <div className="mt-4 mb-1">
                         <div className="text-[9px] uppercase font-bold text-stone-300 px-3 pb-2 tracking-widest">Financial</div>
                         
                         {/* General Tab */}
@@ -306,14 +302,17 @@ export default function Dashboard({ user, onLogout }) {
                                 </span>
                             )}
                         </button>
-                    </div>
+                    </div>}
 
                     {/* Project Stages */}
+                    {access.crm && <>
                     <div className="text-[9px] uppercase font-bold text-stone-300 px-3 pt-4 pb-2 tracking-widest">Project Stages</div>
                     {PRIMARY_STAGES.map(s => (
                         <NavBtn key={s.id} view="stages" stage={s.id} icon={s.icon} label={s.label} count={stageCounts[s.id] || 0} />
                     ))}
 
+                    </>}
+                    {access.admin && <>
                     {/* System */}
                     <div className="text-[9px] uppercase font-bold text-stone-300 px-3 pt-5 pb-2 tracking-widest">System</div>
                     <NavBtn view="activity" icon={Activity}  label="Activity Log"      count={0} />
@@ -321,6 +320,7 @@ export default function Dashboard({ user, onLogout }) {
                         <NavBtn view="users" icon={UserCog} label="User Management" count={0} />
                     )}
                     <NavBtn view="trash" icon={Trash2} label="Trash" count={trashCount} redBadge />
+                    </>}
                 </div>
 
                 {/* User + Logout */}
@@ -399,7 +399,7 @@ export default function Dashboard({ user, onLogout }) {
                         </div>
 
                         {/* Per-stage search (only in stages view) */}
-                        {currentView === 'stages' && (
+                        {currentView === 'stages' && access.crm && (
                             <div className="relative hidden lg:block">
                                 <Search className="absolute left-3 top-2.5 text-stone-400 w-4 h-4" />
                                 <input type="text" placeholder="Filter this stage..." value={stageSearch}
@@ -408,18 +408,18 @@ export default function Dashboard({ user, onLogout }) {
                             </div>
                         )}
 
-                        {(user.userType === 'admin' || user.userType === 'sales') && (
+                        {(access.crm || access.finance) && (
                             <>
                                 <button onClick={() => exportAllToCSV(filteredActive)}
                                     className="flex items-center gap-1.5 border border-stone-200 text-stone-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-stone-50 transition-colors">
                                     <Download className="w-4 h-4" />
                                     <span className="hidden sm:inline text-xs">Export</span>
                                 </button>
-                                <button onClick={() => setShowAddLead(true)}
+                                {access.crm && <button onClick={() => setShowAddLead(true)}
                                     className="flex items-center gap-1.5 bg-stone-900 text-white px-3 py-2 rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors">
                                     <Plus className="w-4 h-4" />
                                     <span className="hidden sm:inline text-xs">Add Lead</span>
-                                </button>
+                                </button>}
                             </>
                         )}
                     </div>
@@ -427,15 +427,16 @@ export default function Dashboard({ user, onLogout }) {
 
                 {/* View router */}
                 <div className="flex-1 p-4 lg:p-6">
+                    {dataError && <div role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{dataError}<button onClick={() => fetchData()} className="ml-3 underline">Retry</button></div>}
 
-                    {currentView === 'dashboard' && <DashboardView customers={filteredActive} loading={loading} />}
-                    {currentView === 'financial' && <FinancialView customers={filteredActive} onSelectCustomer={setSelectedCustomer} projectType={financialProjectType} />}
-                    {currentView === 'subsidy'   && <SubsidyView customers={filteredActive} onSelectCustomer={setSelectedCustomer} />}
-                    {currentView === 'activity'  && <ActivityLogView />}
+                    {currentView === 'dashboard' && <DashboardView customers={filteredActive} loading={loading} access={access} />}
+                    {currentView === 'financial' && access.finance && <FinancialView customers={filteredActive} onSelectCustomer={setSelectedCustomer} projectType={financialProjectType} />}
+                    {currentView === 'subsidy' && access.finance && <SubsidyView customers={filteredActive} onSelectCustomer={setSelectedCustomer} />}
+                    {currentView === 'activity' && access.admin && <ActivityLogView />}
                     {currentView === 'users' && user.userType === 'admin' && <UserManagementView currentUser={user} />}
 
                     {/* Trash view */}
-                    {currentView === 'trash' && (
+                    {currentView === 'trash' && access.admin && (
                         <TrashView
                             trashedCustomers={trashed}
                             onRecover={handleRecover}
@@ -445,7 +446,7 @@ export default function Dashboard({ user, onLogout }) {
                     )}
 
                     {/* Stage grid */}
-                    {currentView === 'stages' && (
+                    {currentView === 'stages' && access.crm && (
                         loading ? (
                             <div className="flex items-center justify-center h-64">
                                 <div className="w-8 h-8 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" />
@@ -453,7 +454,7 @@ export default function Dashboard({ user, onLogout }) {
                         ) : filtered.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                                 {filtered.map(c => (
-                                    <CustomerCard key={c.id} customer={c} onSelect={setSelectedCustomer} onMoveStage={handleMoveStage} />
+                                    <CustomerCard canSeeFinance={access.finance} key={c.id} customer={c} onSelect={setSelectedCustomer} onMoveStage={handleMoveStage} />
                                 ))}
                             </div>
                         ) : (
@@ -478,7 +479,7 @@ export default function Dashboard({ user, onLogout }) {
                     meta={meta}
                 />
             )}
-            {showAddLead && <AddLeadModal onClose={() => setShowAddLead(false)} onSave={handleAddLead} meta={meta} />}
+            {showAddLead && access.crm && <AddLeadModal canSeeFinance={access.finance} onClose={() => setShowAddLead(false)} onSave={handleAddLead} meta={meta} />}
         </div>
     );
 }

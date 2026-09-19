@@ -1,6 +1,7 @@
 // ─── LoginScreen.jsx ──────────────────────────────────────────────────────────
 import { useState } from 'react';
 import { supabase } from '../supabase';
+import { canEnterPortal } from '../access';
 import { Mail, User, Eye, EyeOff, Sparkles, Sun, ArrowLeft, KeyRound } from 'lucide-react';
 
 export default function LoginScreen({ onLogin }) {
@@ -39,6 +40,10 @@ export default function LoginScreen({ onLogin }) {
             if (profile.status === 'inactive') {
                 await supabase.auth.signOut();
                 throw new Error('Your account has been deactivated. Contact Admin.');
+            }
+            if (!canEnterPortal(profile)) {
+                await supabase.auth.signOut();
+                throw new Error('This account does not have portal access. Contact Admin.');
             }
             onLogin({
                 id: authData.user.id,

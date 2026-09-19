@@ -80,6 +80,7 @@ export const DEFAULT_LEAD_FORM = {
     area: '',
     system_capacity_kwp: '',
     application_no: '',
+    subdivision: '',
     panel: '',
     inverter: '',
     date_of_registration: '',

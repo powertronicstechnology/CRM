@@ -1,3 +1,4 @@
+import { permissionsFor } from '../access';
 // ─── CustomerDetailModal.jsx ──────────────────────────────────────────────────
 // Full customer detail: 4-tab layout (Overview, Finance & Bank, Checklist,
 // Notes & History). Section-level editing, sequential payments manager,
@@ -564,11 +565,13 @@ const SUBSIDY_STATUS_OPTIONS = [
 
 // ─── CustomerDetailModal ──────────────────────────────────────────────────────
 export default function CustomerDetailModal({ customer, onClose, onUpdate, onDelete, user, meta = {} }) {
-    const [activeTab, setActiveTab] = useState('overview');
+    const access = permissionsFor(user.userType);
+    const [activeTab, setActiveTab] = useState(access.crm ? 'overview' : 'finance');
     const [editingSection, setEditingSection] = useState(null);
     const [editData, setEditData] = useState({ ...customer });
     const [followUpText, setFollowUpText] = useState('');
     const [commentText, setCommentText] = useState('');
+    const [saveError, setSaveError] = useState('');
     const [saving, setSaving] = useState(false);
     const [savingPayments, setSavingPayments] = useState(false);
     const [pendingSubsidyStatus, setPendingSubsidyStatus] = useState('');
@@ -592,6 +595,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
     };
 
     const fetchLogs = async () => {
+        if (!access.admin) return;
         const { data } = await supabase.from('activity_log').select('*, profiles(name)')
             .or(`new_value.eq.${customer.id},message.ilike.%${customer.customer_name}%`)
             .order('created_at', { ascending: false }).limit(25);
@@ -621,10 +625,10 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                 payments: initialPayments,
                 follow_ups: customer.follow_ups,
                 subsidy_history: customer.subsidy_history,
-                stage_remarks: customer.stage_remarks
+                stages_remarks: customer.stages_remarks
             };
         });
-    }, [customer.project_checklist, customer.payments, customer.follow_ups, customer.subsidy_history, customer.stage_remarks]);
+    }, [customer.project_checklist, customer.payments, customer.follow_ups, customer.subsidy_history, customer.stages_remarks]);
 
     // ── Financial values are calculated by the Supabase backend trigger.
     // The modal only edits raw financial/payment fields.
@@ -644,6 +648,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
     const handleSavePayments = async (customPayments) => {
         setSavingPayments(true);
+        setSaveError('');
+        try {
 
         const paymentsToSave = customPayments || editData.payments || [];
         const updates = {
@@ -687,13 +693,17 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
         setSavingPayments(false);
         fetchLogs();
+        } catch (error) { setSaveError(error.message || 'Unable to save changes'); }
+        finally { setSavingPayments(false); }
     };
 
     const handleSave = async () => {
         setSaving(true);
+        setSaveError('');
+        try {
         const updates = { ...editData };
 
-        for (let k = 1; k <= 5; k++) {
+        for (let k = 1; editingSection === 'fin' && k <= 5; k++) {
             const p = (updates.payments || [])[k - 1];
             updates[`payment_${k}`] = p ? (p.amount !== '' ? Number(p.amount) : null) : null;
             updates[`payment_remark_${k}`] = p ? (p.remark || null) : null;
@@ -712,6 +722,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         setEditingSection(null);
         setSaving(false);
         fetchLogs();
+        } catch (error) { setSaveError(error.message || 'Unable to save changes'); }
+        finally { setSaving(false); }
     };
 
     const handleAddNote = async () => {
@@ -730,11 +742,11 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         const timestamp = new Date().toISOString();
         const line = `[${formatLogDate(timestamp)}] ${user.name} (${editData.stage || 'no stage'}): ${text}`;
         const updatedInternalRemarks = editData.internal_remarks ? `${editData.internal_remarks}\n${line}` : line;
-        const updatedStageRemarks = [...(editData.stage_remarks || []), { text, author: user.name, date: timestamp, stage: editData.stage || null }];
+        const updatedStageRemarks = [...(editData.stages_remarks || []), { text, author: user.name, date: timestamp, stage: editData.stage || null }];
 
-        await onUpdate(customer.id, { internal_remarks: updatedInternalRemarks, stage_remarks: updatedStageRemarks });
+        await onUpdate(customer.id, { internal_remarks: updatedInternalRemarks, stages_remarks: updatedStageRemarks });
         await logActivity(user.id, 'note', `Comment Added: ${text}`, customer.id);
-        setEditData(prev => ({ ...prev, internal_remarks: updatedInternalRemarks, stage_remarks: updatedStageRemarks }));
+        setEditData(prev => ({ ...prev, internal_remarks: updatedInternalRemarks, stages_remarks: updatedStageRemarks }));
         setCommentText('');
         fetchLogs();
     };
@@ -853,7 +865,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                         { id: 'subsidy', label: 'Subsidy', icon: Banknote },
                         { id: 'checklist', label: 'Checklist', icon: CheckSquare },
                         { id: 'history', label: 'Notes & History', icon: History },
-                    ].map(tab => (
+                    ].filter(tab => tab.id === 'finance' || tab.id === 'subsidy' ? access.finance : access.crm).map(tab => (
                         <button key={tab.id} onClick={() => { setActiveTab(tab.id); setEditingSection(null); }}
                             className={`flex items-center gap-2 py-3 text-[11px] font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id ? 'text-amber-400 border-amber-400' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
                             <tab.icon size={12} /> {tab.label}
@@ -862,6 +874,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 bg-[#FCFBFA]">
+                    {saveError && <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">{saveError}</p>}
 
                     {/* ── OVERVIEW ── */}
                     {activeTab === 'overview' && (
@@ -942,8 +955,9 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 <SectionHeader title="Project & Technical" id="pro" icon={Zap} />
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                                     <EditableDetailItem label="System Capacity (kWp)" field="system_capacity_kwp" value={editData.system_capacity_kwp} onChange={handleChange} type="number" isEnergy isEditing={editingSection === 'pro'} />
-                                    <EditableDetailItem label="PO No" field="po_no" value={editData.po_no} onChange={handleChange} isEditing={editingSection === 'pro'} />
+                                    {access.finance && <EditableDetailItem label="PO No" field="po_no" value={editData.po_no} onChange={handleChange} isEditing={editingSection === 'pro'} />}
                                     <EditableDetailItem label="APPLICATION NO" field="application_no" value={editData.application_no} onChange={handleChange} isEditing={editingSection === 'pro'} />
+                                    <EditableDetailItem label="SUBDIVISION" field="subdivision" value={editData.subdivision} onChange={handleChange} isEditing={editingSection === 'pro'} />
                                     <EditableDetailItem label="Consumer Number" field="consumer_number" value={editData.consumer_number} onChange={handleChange} isEditing={editingSection === 'pro'} />
                                     <EditableDetailItem label="PANEL" field="panel" value={editData.panel} onChange={handleChange} options={meta['panel']} category="panel" isEditing={editingSection === 'pro'} />
                                     <EditableDetailItem label="INVERTER" field="inverter" value={editData.inverter} onChange={handleChange} options={meta['inverter']} category="inverter" isEditing={editingSection === 'pro'} />
@@ -1419,7 +1433,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 </div>
                             </section>
 
-                            <section>
+                            {access.admin && <section>
                                 <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-6">Detailed System History</h3>
                                 <div className="space-y-4">
                                     {activityLogs.length > 0 ? activityLogs.map((log, i) => (
@@ -1444,7 +1458,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                         </div>
                                     )) : <p className="text-xs text-stone-400 italic">No timeline entries found.</p>}
                                 </div>
-                            </section>
+                            </section>}
                         </div>
                     )}
                 </div>

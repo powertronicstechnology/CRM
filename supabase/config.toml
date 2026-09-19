@@ -4,6 +4,12 @@
 # working directory name when running `supabase init`.
 project_id = "solar-copy1"
 
+# Source supplied by the project owner; deployment is a separate action.
+[functions.add_user]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/add_user/index.ts"
+
 [api]
 enabled = true
 # Port to use for the API URL.
