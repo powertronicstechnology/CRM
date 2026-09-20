@@ -61,23 +61,58 @@ def keep_alive():
 
 
 def run(command, *, input=None):
-    result = subprocess.run(command, input=input, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, timeout=900)
+    tool = Path(command[0]).name
+    try:
+        result = subprocess.run(command, input=input, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, timeout=900)
+    except FileNotFoundError:
+        raise RuntimeError(f'{tool} is not installed on the backup runner') from None
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f'{tool} exceeded the 15-minute timeout') from None
     if result.returncode:
-        # Tools can print connection strings and SQL on failure. Never relay their output.
-        raise RuntimeError(f'{Path(command[0]).name} failed; output withheld to protect credentials and data')
+        # Match known failures, but never print raw output, SQL or connection details.
+        output = (result.stderr or b'').decode('utf-8', errors='replace').lower()
+        hints = [
+            ('password authentication failed', 'Database password rejected; check the password in SUPABASE_DB_URL'),
+            ('tenant or user not found', 'Pooler project or username is incorrect; copy the Session pooler URI again'),
+            ('could not translate host name', 'Database hostname could not be resolved; check the copied pooler URI'),
+            ('network is unreachable', 'Database network is unreachable; use the IPv4-compatible Session pooler URI'),
+            ('connection refused', 'Database connection refused; check project status and pooler port'),
+            ('connection timed out', 'Database connection timed out; check project status and network restrictions'),
+            ('cannot connect to the docker daemon', 'Docker is not available on the backup runner'),
+        ]
+        for pattern, message in hints:
+            if pattern in output:
+                raise RuntimeError(message)
+        raise RuntimeError(f'{tool} failed (exit {result.returncode}); output withheld to protect credentials and data')
     return result.stdout
 
 
-def backup(destination):
-    url = required('SUPABASE_DB_URL')
-    if not url.startswith(('postgresql://', 'postgres://')):
-        raise RuntimeError('SUPABASE_DB_URL must be a Postgres connection URI')
-    parts = urlsplit(url)
+def database_url(value):
+    value = value.strip()
+    if not value.startswith(('postgresql://', 'postgres://')):
+        raise RuntimeError('SUPABASE_DB_URL must be a Postgres URI, not an HTTPS project URL or shell command')
+    if re.search(r'\[(?:YOUR[-_ ]?PASSWORD|PASSWORD)\]|<[^>]+>', value, re.I):
+        raise RuntimeError('SUPABASE_DB_URL still contains a placeholder; replace it with the database password and remove the brackets')
+    try:
+        parts = urlsplit(value)
+        host, port = parts.hostname, parts.port
+    except ValueError:
+        raise RuntimeError('SUPABASE_DB_URL is malformed; remove placeholder brackets and URL-encode special characters in the database password') from None
+    if not host or not parts.username or not parts.password or not parts.path.strip('/'):
+        raise RuntimeError('SUPABASE_DB_URL must include username, database password, hostname and database name')
+    if parts.fragment or any(c.isspace() for c in value) or re.search(r'%(?![0-9a-fA-F]{2})',value):
+        raise RuntimeError('SUPABASE_DB_URL contains unescaped characters; URL-encode the database password')
+    if port == 6543:
+        raise RuntimeError('Use the Session pooler URI on port 5432, not the transaction pooler on port 6543')
     query = dict(parse_qsl(parts.query))
     if query.get('sslmode') not in ('require', 'verify-ca', 'verify-full'):
         query['sslmode'] = 'require'
-    url = urlunsplit(parts._replace(query=urlencode(query)))
+    return urlunsplit(parts._replace(query=urlencode(query)))
+
+
+def backup(destination):
+    url = database_url(required('SUPABASE_DB_URL'))
     passphrase = required('BACKUP_PASSPHRASE')
     if len(passphrase) < 32 or '\n' in passphrase or '\r' in passphrase:
         raise RuntimeError('Use a single-line backup passphrase of at least 32 characters')
@@ -100,6 +135,7 @@ def backup(destination):
                                     'Restore into a separate Supabase project must be tested before relying on recovery']}
         for filename, flags in commands.items():
             path = folder / filename
+            print(f'Creating {filename} dump.', flush=True)
             run(['supabase', 'db', 'dump', '--db-url', url, '-f', str(path), *flags])
             if not path.exists() or path.stat().st_size == 0:
                 raise RuntimeError(f'Empty or missing dump: {filename}')
@@ -143,5 +179,5 @@ if __name__ == '__main__':
             raise RuntimeError('Usage: maintenance.py check-repo | keep-alive | backup DESTINATION')
     except Exception as exc:
         # HTTP/tool exceptions may include URLs and secrets; expose only our explicit diagnostics.
-        print(str(exc) if type(exc) is RuntimeError else 'Maintenance failed; check secrets, connectivity and service availability.', file=sys.stderr)
+        print(str(exc) if type(exc) is RuntimeError else f'Maintenance failed ({type(exc).__name__}); no credentials or database contents logged.', file=sys.stderr)
         sys.exit(1)
