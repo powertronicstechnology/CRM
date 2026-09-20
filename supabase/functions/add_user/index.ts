@@ -202,7 +202,7 @@ serve(async (req) => {
             // Step 3: send them a "set your password" email
             // Wait for completion so the runtime cannot discard the email request.
             const { error: resetError } = await adminClient.auth.resetPasswordForEmail(email, {
-                redirectTo: "https://powertronicstechnology.github.io/CRM/"
+                redirectTo: "https://powertronicstechnology.github.io/CRM/?reset_password=1"
             })
 
             return new Response(

@@ -1,3 +1,4 @@
+import { quotationAmount, receivableAmount } from './quotation.js';
 import { permissionsFor } from './access.js';
 
 const column = (header, field, width = 22) => ({ header, field, width });
@@ -8,7 +9,7 @@ export const CUSTOMER_COLUMNS = [
     column('MOBILE NO', 'phone_number'), column('SYSTEM IN KW', 'system_capacity_kwp'),
     column('PANEL', 'panel'), column('INVERTER', 'inverter'),
     column('CONSUMER NUMBER', 'consumer_number'), column('APPLICATION NO', 'application_no', 28),
-    column('QUOTATION AMOUNT', 'quoted_amount'), column('DATE OF REGISTRATION', 'date_of_registration'),
+    column('QUOTATION AMOUNT', 'effective_quotation'), column('ORIGINAL QUOTATION', 'quoted_amount'), column('FINANCE QUOTATION', 'quoted_amount_3'), column('DATE OF REGISTRATION', 'date_of_registration'),
     column('PAYMENT RECEIPT', 'payment_reciept'), column('FABRICATION AND WIRING', 'fabrication_and_wiring'),
     column('PANEL AND INVERTER', 'panel_and_inverter'), column('METER FILE SUBMISSION', 'meter_file_submission'),
     column('METER INSTALED', 'meter_instaled'), column('SUBSIDY CLAIM', 'subsidy_claim'),
@@ -19,7 +20,7 @@ export const CUSTOMER_COLUMNS = [
 const FINANCIAL_COLUMNS = [
     column('SR. NO', null, 9), column('NAME', 'customer_name', 34),
     column('CRN', 'crn'), column('RECORD ID', 'id', 38), column('PROJECT TYPE', 'project_type'),
-    column('FINANCIAL TAG', 'financial_tag', 34), column('QUOTATION AMOUNT', 'quoted_amount'),
+    column('FINANCIAL TAG', 'financial_tag', 34), column('QUOTATION AMOUNT', 'effective_quotation'), column('ORIGINAL QUOTATION', 'quoted_amount'), column('FINANCE QUOTATION', 'quoted_amount_3'),
     column('QUOTATION AMOUNT 2', 'quoted_amount_2'), column('QUOTATION AMOUNT 3', 'quoted_amount_3'),
     column('TOTAL RECEIVED', 'total_received'), column('RECEIVABLES', 'receivables'),
     column('PAYMENT RECEIPT', 'payment_reciept'), column('PAYMENT NOTES', 'payment_notes', 40),
@@ -59,7 +60,7 @@ export function exportSheets(records, userType, selection = 'all') {
     const active = records.filter(record => !record.deleted_at);
     const sheets = [];
     const add = (name, columns) => sheets.push({ name, columns, rows: active.map((record, index) =>
-        columns.map(({ field }) => field === null ? index + 1 : field === undefined ? '' : cellValue(record[field], field))) });
+        columns.map(({ field }) => field === null ? index + 1 : field === undefined ? '' : cellValue(field === 'effective_quotation' ? quotationAmount(record) : field === 'receivables' ? receivableAmount(record) : record[field], field))) });
     if (access.crm && selection !== 'finance') add('Customers', CUSTOMER_COLUMNS);
     if (access.finance && selection !== 'customers') add('Financial', [...FINANCIAL_COLUMNS, ...(access.crm ? OTHER_COLUMNS : [])]);
     return sheets;

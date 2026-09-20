@@ -1,3 +1,7 @@
+import ActivityHistory from './ActivityHistory.jsx';
+import { receivableAmount } from '../quotation.js';
+import UnsavedChanges, { useUnsavedChanges } from './UnsavedChanges';
+import { paymentFields, checklistFields } from '../draftFields.js';
 import { permissionsFor } from '../access';
 // ─── CustomerDetailModal.jsx ──────────────────────────────────────────────────
 // Full customer detail: 4-tab layout (Overview, Finance & Bank, Checklist,
@@ -5,7 +9,7 @@ import { permissionsFor } from '../access';
 // subsidy status tags, centralized comments, and system activity timeline.
 // ──────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
     X, Edit3, Trash2, Save, Send, AlertTriangle, CheckSquare,
     User, Zap, IndianRupee,
@@ -103,40 +107,40 @@ function MetaSelect({ label, field, value, onChange, category, options = [], isE
 
     if (!isEditing) {
         return (
-            <div className="bg-stone-50 py-1.5 px-3 rounded-xl">
-                <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
-                <p className="text-sm font-semibold truncate text-stone-800">{value || '–'}</p>
+            <div className="bg-stone-50 py-2.5 px-3 rounded-2xl">
+                <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">{label}</p>
+                <p className="text-base font-semibold truncate text-stone-800">{value || '–'}</p>
             </div>
         );
     }
 
     if (adding) {
         return (
-            <div className="bg-stone-50 py-1.5 px-3 rounded-xl space-y-1">
-                <p className="text-xs text-stone-400 uppercase tracking-wider font-bold">{label} — New</p>
+            <div className="bg-stone-50 py-2.5 px-3 rounded-2xl space-y-1">
+                <p className="text-sm text-stone-500 uppercase tracking-wider font-semibold">{label} — New</p>
                 <div className="flex gap-1">
                     <input autoFocus value={newVal} onChange={e => setNewVal(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAdd()}
                         placeholder={`New ${label}...`}
-                        className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300" />
-                    <button onClick={handleAdd} className="px-3 py-1 bg-amber-500 text-white rounded-lg text-xs font-bold">Add</button>
-                    <button onClick={() => setAdding(false)} className="px-3 py-1 bg-stone-200 text-stone-600 rounded-lg text-xs">✕</button>
+                        className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-amber-300" />
+                    <button onClick={handleAdd} className="px-3 py-1 bg-amber-500 text-white rounded-lg text-base font-semibold">Add</button>
+                    <button onClick={() => setAdding(false)} className="px-3 py-1 bg-stone-200 text-stone-600 rounded-lg text-base">✕</button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-stone-50 py-1.5 px-3 rounded-xl">
-            <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
+        <div className="bg-stone-50 py-2.5 px-3 rounded-2xl">
+            <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">{label}</p>
             <div className="flex gap-1">
                 <select value={value || ''} onChange={e => onChange(field, e.target.value)}
-                    className="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300">
+                    className="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-amber-300">
                     <option value="">Select...</option>
                     {localOptions.map(o => <option key={o}>{o}</option>)}
                 </select>
                 <button onClick={() => setAdding(true)} title="Add new option"
-                    className="px-2 py-1 bg-stone-100 hover:bg-amber-50 hover:text-amber-600 text-stone-400 rounded-lg text-xs transition-colors flex items-center justify-center">
+                    className="px-2 py-1 bg-stone-100 hover:bg-amber-50 hover:text-amber-600 text-stone-400 rounded-lg text-base transition-colors flex items-center justify-center">
                     <Plus className="w-3.5 h-3.5" />
                 </button>
             </div>
@@ -155,9 +159,9 @@ function DetailItem({ label, value, isMoney = false, isEnergy = false, noTruncat
         if (found) displayVal = found.label;
     }
     return (
-        <div className={`bg-stone-50 py-3 px-4 rounded-2xl ${className}`}>
-            <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
-            <p className={`text-base font-semibold ${noTruncate ? 'break-words whitespace-pre-wrap' : 'truncate'} ${isMoney ? 'text-emerald-600' : isEnergy ? 'text-amber-600' : 'text-stone-800'}`}>
+        <div className={`bg-stone-50 py-2.5 px-3 rounded-2xl ${className}`}>
+            <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">{label}</p>
+            <p className={`text-base font-semibold ${noTruncate ? 'break-words whitespace-pre-wrap' : 'truncate'} ${isMoney ? 'text-emerald-700' : isEnergy ? 'text-amber-600' : 'text-stone-800'}`}>
                 {isMoney ? fmt(value) : displayVal}
             </p>
         </div>
@@ -174,11 +178,11 @@ function EditableDetailItem({ label, field, value, onChange, type = 'text', isMo
     }
     if (!isEditing) return <DetailItem label={label} value={value} isMoney={isMoney} isEnergy={isEnergy} noTruncate={noTruncate} className={className} type={type} options={options} />;
     return (
-        <div className={`bg-stone-50 py-1.5 px-3 rounded-xl ${className}`}>
-            <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">{label}</p>
+        <div className={`bg-stone-50 py-2.5 px-3 rounded-2xl ${className}`}>
+            <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">{label}</p>
             {options ? (
                 <select value={value || ''} onChange={e => onChange(field, e.target.value)} disabled={disabled}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50">
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50">
                     <option value="">Select...</option>
                     {options.map(o => {
                         const isObj = typeof o === 'object' && o !== null;
@@ -189,20 +193,20 @@ function EditableDetailItem({ label, field, value, onChange, type = 'text', isMo
                 </select>
             ) : type === 'textarea' ? (
                 <textarea value={value || ''} onChange={e => onChange(field, e.target.value)} rows={2} disabled={disabled}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300 resize-none disabled:opacity-50" />
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-amber-300 resize-none disabled:opacity-50" />
             ) : isMoney ? (
                 <input type="text" placeholder="₹" value={formatInputRupee(value)} onChange={e => onChange(field, parseInputRupee(e.target.value))} disabled={disabled}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50 font-semibold text-stone-800" />
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50 font-semibold text-stone-800" />
             ) : (
                 <input type={type} value={value || ''} onChange={e => onChange(field, e.target.value)} disabled={disabled}
-                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50" />
+                    className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-amber-300 disabled:opacity-50" />
             )}
         </div>
     );
 }
 
 // ─── Standalone Sequential Payments Manager ──────────────────────────────────
-function PaymentsManager({ payments = [], onSavePayments, saving = false, projectType = 'General', receivables = 0, totalReceived = 0, meta = {} }) {
+function PaymentsManager({ payments = [], onSavePayments, saving = false, draftRef, onDraftChange, requestNavigation, projectType = 'General', receivables = 0, totalReceived = 0, meta = {} }) {
     const maxPayments = String(projectType || '').toLowerCase().includes('surya') ? 5 : 3;
     const [addingMethod, setAddingMethod] = useState(false);
     const [newMethod, setNewMethod] = useState('');
@@ -252,7 +256,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
             date: nextPayment.date || getTodayDateString()
         };
         const updatedList = [...savedPayments, newSlot];
-        await onSavePayments(updatedList);
+        if (await onSavePayments(updatedList) === false) return false;
         // Reset new payment slot
         setNextPayment({
             amount: '',
@@ -264,7 +268,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
     // Delete a saved payment
     const handleRemoveSaved = async (idx) => {
         const updatedList = savedPayments.filter((_, i) => i !== idx).map((p, i) => ({ ...p, no: i + 1 }));
-        await onSavePayments(updatedList);
+        if (await onSavePayments(updatedList) === false) return false;
         if (editingIndex === idx) setEditingIndex(null);
     };
 
@@ -292,8 +296,27 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
             }
             return p;
         });
-        await onSavePayments(updatedList);
+        if (await onSavePayments(updatedList) === false) return false;
         setEditingIndex(null);
+    };
+
+    const paymentDirty = !!newMethod.trim() || nextPayment.amount !== '' || nextPayment.remark !== 'ONL' || nextPayment.date !== getTodayDateString()
+        || (editingIndex !== null && JSON.stringify(editPaymentState) !== JSON.stringify({ amount: savedPayments[editingIndex]?.amount, remark: savedPayments[editingIndex]?.remark || 'ONL', date: savedPayments[editingIndex]?.date || getTodayDateString() }));
+    useEffect(() => { onDraftChange?.(paymentDirty); }, [paymentDirty, onDraftChange]);
+    useEffect(() => () => { if (draftRef) draftRef.current = null; onDraftChange?.(false); }, [draftRef, onDraftChange]);
+    if (draftRef) draftRef.current = {
+        dirty: paymentDirty,
+        collect: () => {
+            let result = savedPayments.map((payment, index) => index === editingIndex ? { ...payment, ...editPaymentState } : payment);
+            if (newMethod.trim() || nextPayment.amount !== '' || nextPayment.remark !== 'ONL' || nextPayment.date !== getTodayDateString()) {
+                if (!Number.isFinite(Number(nextPayment.amount)) || Number(nextPayment.amount) <= 0) throw new Error('Enter a payment amount greater than zero, or keep editing.');
+                result = [...result, { ...nextPayment, remark: newMethod.trim().toUpperCase() || nextPayment.remark, no: result.length + 1 }];
+            }
+            if (result.some(payment => !Number.isFinite(Number(payment.amount)) || Number(payment.amount) <= 0)) throw new Error('Payment amounts must be greater than zero.');
+            if (result.length > maxPayments) throw new Error('The maximum number of payments has been reached.');
+            return paymentFields(result);
+        },
+        reset: () => { setNewMethod(''); setAddingMethod(false); setEditingIndex(null); setNextPayment({ amount: '', remark: 'ONL', date: getTodayDateString() }); onDraftChange?.(false); },
     };
 
     const canShowNextSlot = !isFullyPaid && savedPayments.length < maxPayments;
@@ -307,10 +330,10 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                         <CreditCard size={15} />
                     </div>
                     <div>
-                        <h4 className="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                        <h4 className="text-sm font-semibold text-stone-800 uppercase tracking-wider">
                             Payment Records ({String(projectType || '').toLowerCase().includes('surya') ? 'Max 5' : 'Max 3'})
                         </h4>
-                        <p className="text-xs text-stone-400">
+                        <p className="text-base text-stone-400">
                             {isFullyPaid ? 'Account fully settled' : `Recorded ${savedPayments.length} of ${maxPayments} installments`}
                         </p>
                     </div>
@@ -326,44 +349,44 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                         return (
                             <div key={i} className="bg-amber-50/50 rounded-xl p-3.5 border border-amber-200 space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-md">
+                                    <span className="text-sm font-semibold uppercase tracking-wider text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-md">
                                         Editing Payment {p.no || i + 1}
                                     </span>
                                     <button
                                         type="button"
-                                        onClick={() => setEditingIndex(null)}
-                                        className="text-stone-400 hover:text-stone-600 text-xs font-semibold"
+                                        onClick={() => requestNavigation(() => setEditingIndex(null))}
+                                        className="text-stone-400 hover:text-stone-600 text-base font-semibold"
                                     >
                                         Cancel
                                     </button>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
-                                        <label className="text-[9px] text-stone-400 uppercase font-bold block mb-1">Amount (₹)</label>
+                                        <label className="text-sm text-stone-500 uppercase font-semibold block mb-1">Amount (₹)</label>
                                         <input
                                             type="text"
                                             value={formatInputRupee(editPaymentState.amount)}
                                             onChange={e => setEditPaymentState(prev => ({ ...prev, amount: parseInputRupee(e.target.value) }))}
-                                            className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                            className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-base font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[9px] text-stone-400 uppercase font-bold block mb-1">Method</label>
+                                        <label className="text-sm text-stone-500 uppercase font-semibold block mb-1">Method</label>
                                         <select
                                             value={editPaymentState.remark || 'ONL'}
                                             onChange={e => setEditPaymentState(prev => ({ ...prev, remark: e.target.value }))}
-                                            className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                            className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-base font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                         >
                                             {allMethods.map(m => <option key={m} value={m}>{m}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="text-[9px] text-stone-400 uppercase font-bold block mb-1">Date</label>
+                                        <label className="text-sm text-stone-500 uppercase font-semibold block mb-1">Date</label>
                                         <input
                                             type="date"
                                             value={editPaymentState.date || getTodayDateString()}
                                             onChange={e => setEditPaymentState(prev => ({ ...prev, date: e.target.value }))}
-                                            className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                            className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-base font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                         />
                                     </div>
                                 </div>
@@ -372,7 +395,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                                         type="button"
                                         onClick={() => handleSaveEditedPayment(i)}
                                         disabled={saving}
-                                        className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                        className="bg-amber-600 hover:bg-amber-700 text-white text-base font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
                                     >
                                         <Save size={12} /> Save Update
                                     </button>
@@ -385,16 +408,16 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                     return (
                         <div key={i} className="flex items-center justify-between p-3 bg-stone-100/70 hover:bg-stone-100 rounded-xl border border-stone-200/60 transition-colors">
                             <div className="flex items-center gap-3 flex-wrap">
-                                <span className="text-xs font-bold uppercase tracking-wider text-stone-700 bg-stone-200/80 px-2 py-0.5 rounded-md">
+                                <span className="text-sm font-semibold uppercase tracking-wider text-stone-700 bg-stone-200/80 px-2 py-0.5 rounded-md">
                                     Payment {p.no || i + 1}
                                 </span>
-                                <span className="text-sm font-extrabold text-stone-900">
+                                <span className="text-base font-semibold text-stone-900">
                                     ₹{Number(p.amount || 0).toLocaleString('en-IN')}
                                 </span>
-                                <span className="text-xs font-bold text-stone-600 bg-stone-200/60 px-2 py-0.5 rounded-md uppercase">
+                                <span className="text-sm font-semibold text-stone-600 bg-stone-200/60 px-2 py-0.5 rounded-md uppercase">
                                     {p.remark || 'ONL'}
                                 </span>
-                                <span className="text-xs text-stone-500 font-medium">
+                                <span className="text-base text-stone-500 font-medium">
                                     {p.date ? formatDate(p.date) : '–'}
                                 </span>
                             </div>
@@ -402,7 +425,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                             <div className="flex items-center gap-1">
                                 <button
                                     type="button"
-                                    onClick={() => handleStartEdit(i)}
+                                    onClick={() => requestNavigation(() => handleStartEdit(i))}
                                     title="Edit payment"
                                     className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-lg transition-colors"
                                 >
@@ -410,7 +433,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => handleRemoveSaved(i)}
+                                    onClick={() => requestNavigation(() => handleRemoveSaved(i))}
                                     title="Delete payment"
                                     className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                 >
@@ -425,31 +448,31 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                 {canShowNextSlot && (
                     <div className="bg-stone-50/90 rounded-xl p-4 border border-stone-200 space-y-3.5 mt-2">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-2.5 py-0.5 rounded-md">
+                            <span className="text-sm font-semibold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-2.5 py-0.5 rounded-md">
                                 Payment {savedPayments.length + 1}
                             </span>
-                            <span className="text-xs text-stone-400 font-medium">Enter details and save to lock</span>
+                            <span className="text-base text-stone-400 font-medium">Enter details and save to lock</span>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                                <label className="text-[9px] text-stone-400 uppercase font-bold block mb-1">Amount (₹)</label>
+                                <label className="text-sm text-stone-500 uppercase font-semibold block mb-1">Amount (₹)</label>
                                 <input
                                     type="text"
                                     placeholder="Enter amount..."
                                     value={formatInputRupee(nextPayment.amount)}
                                     onChange={e => setNextPayment(prev => ({ ...prev, amount: parseInputRupee(e.target.value) }))}
-                                    className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                    className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-base font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                 />
                             </div>
 
                             <div>
                                 <div className="flex items-center justify-between mb-1">
-                                    <label className="text-[9px] text-stone-400 uppercase font-bold">Method</label>
+                                    <label className="text-sm text-stone-500 uppercase font-semibold">Method</label>
                                     <button
                                         type="button"
                                         onClick={() => setAddingMethod(!addingMethod)}
-                                        className="text-[9px] font-bold text-amber-600 hover:underline flex items-center gap-0.5"
+                                        className="text-base font-semibold text-amber-600 hover:underline flex items-center gap-0.5"
                                     >
                                         <Plus size={10} /> Add
                                     </button>
@@ -462,19 +485,19 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                                             value={newMethod}
                                             onChange={e => setNewMethod(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && handleAddNewMethod()}
-                                            className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                                            className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1.5 text-base focus:outline-none"
                                         />
                                         <button
                                             type="button"
                                             onClick={handleAddNewMethod}
-                                            className="bg-amber-500 text-white px-2 py-1 rounded-lg text-xs font-bold"
+                                            className="bg-amber-500 text-white px-2 py-1 rounded-lg text-base font-semibold"
                                         >
                                             Save
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setAddingMethod(false)}
-                                            className="bg-stone-200 text-stone-600 px-2 py-1 rounded-lg text-xs"
+                                            className="bg-stone-200 text-stone-600 px-2 py-1 rounded-lg text-base"
                                         >
                                             ✕
                                         </button>
@@ -483,7 +506,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                                     <select
                                         value={nextPayment.remark || 'ONL'}
                                         onChange={e => setNextPayment(prev => ({ ...prev, remark: e.target.value }))}
-                                        className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                        className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-base font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                     >
                                         {allMethods.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
@@ -492,11 +515,11 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
 
                             <div>
                                 <div className="flex items-center justify-between mb-1">
-                                    <label className="text-[9px] text-stone-400 uppercase font-bold">Date</label>
+                                    <label className="text-sm text-stone-500 uppercase font-semibold">Date</label>
                                     <button
                                         type="button"
                                         onClick={() => setNextPayment(prev => ({ ...prev, date: getTodayDateString() }))}
-                                        className="text-[9px] font-bold text-amber-600 hover:underline"
+                                        className="text-base font-semibold text-amber-600 hover:underline"
                                     >
                                         Today
                                     </button>
@@ -505,7 +528,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                                     type="date"
                                     value={nextPayment.date || getTodayDateString()}
                                     onChange={e => setNextPayment(prev => ({ ...prev, date: e.target.value || getTodayDateString() }))}
-                                    className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                    className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-base font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                 />
                             </div>
                         </div>
@@ -515,7 +538,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
                             type="button"
                             onClick={handleSaveNewPayment}
                             disabled={saving || !nextPayment.amount}
-                            className="w-full bg-stone-900 hover:bg-stone-800 text-white py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm disabled:opacity-40"
+                            className="w-full bg-stone-900 hover:bg-stone-800 text-white py-2.5 px-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2 transition-all shadow-sm disabled:opacity-40"
                         >
                             <Save size={13} /> {saving ? 'Saving...' : `Save Payment ${savedPayments.length + 1}`}
                         </button>
@@ -526,10 +549,10 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, projec
             {/* Total Received Summary */}
             <div className="bg-emerald-50/70 rounded-xl p-3.5 flex justify-between items-center border border-emerald-100 mt-2">
                 <div>
-                    <p className="text-xs font-bold text-emerald-800 uppercase tracking-wide">Total Received (Auto-Sum)</p>
-                    <p className="text-xs text-emerald-600">Calculated across {savedPayments.length} recorded installment{savedPayments.length !== 1 ? 's' : ''}</p>
+                    <p className="text-sm font-semibold text-emerald-800 uppercase tracking-wide">Total Received (Auto-Sum)</p>
+                    <p className="text-base text-emerald-700">Calculated across {savedPayments.length} recorded installment{savedPayments.length !== 1 ? 's' : ''}</p>
                 </div>
-                <p className="text-base font-extrabold text-emerald-700">₹{backendTotalReceived.toLocaleString('en-IN')}</p>
+                <p className="text-base font-semibold text-emerald-700">₹{backendTotalReceived.toLocaleString('en-IN')}</p>
             </div>
         </div>
     );
@@ -541,34 +564,43 @@ const SUBSIDY_STATUS_OPTIONS = [
         id: 'Applied',
         dateField: null,
         classes: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300',
-        selected: 'bg-blue-100 border-blue-400 text-blue-800'
+        selected: 'bg-blue-100 border-blue-500 text-blue-900 shadow-sm'
     },
     {
         id: 'Claimed',
         dateField: 'subsidy_claim',
         classes: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300',
-        selected: 'bg-amber-100 border-amber-400 text-amber-800'
+        selected: 'bg-amber-100 border-amber-500 text-amber-900 shadow-sm'
     },
     {
         id: 'Returned',
         dateField: null,
         classes: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-300',
-        selected: 'bg-rose-100 border-rose-400 text-rose-800'
+        selected: 'bg-rose-100 border-rose-500 text-rose-900 shadow-sm'
     },
     {
         id: 'Received',
         dateField: 'subsidy_received',
         classes: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300',
-        selected: 'bg-emerald-100 border-emerald-400 text-emerald-800'
+        selected: 'bg-emerald-100 border-emerald-500 text-emerald-900 shadow-sm'
     },
 ];
 
 // ─── CustomerDetailModal ──────────────────────────────────────────────────────
-export default function CustomerDetailModal({ customer, onClose, onUpdate, onDelete, user, meta = {} }) {
+export default function CustomerDetailModal({ customer, onClose, onUpdate: updateCustomer, onDelete, user, meta = {} }) {
     const access = permissionsFor(user.userType);
     const [activeTab, setActiveTab] = useState(access.crm ? 'overview' : 'finance');
     const [editingSection, setEditingSection] = useState(null);
     const [editData, setEditData] = useState({ ...customer });
+    const baseline = useRef({ ...customer });
+    const [dirtyFields, setDirtyFields] = useState({});
+    const paymentDraft = useRef(null);
+    const [paymentDirty, setPaymentDirty] = useState(false);
+    const onUpdate = async (id, patch) => {
+        await updateCustomer(id, patch);
+        baseline.current = { ...baseline.current, ...patch };
+        setDirtyFields(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !(key in patch))));
+    };
     const [followUpText, setFollowUpText] = useState('');
     const [commentText, setCommentText] = useState('');
     const [saveError, setSaveError] = useState('');
@@ -580,6 +612,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
     const [savingSubsidy, setSavingSubsidy] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [activityLogs, setActivityLogs] = useState([]);
+    const [activityError, setActivityError] = useState('');
+    const [activityLoading, setActivityLoading] = useState(false);
     const isAdmin = user?.userType === 'admin';
 
     const [localChecklist, setLocalChecklist] = useState(normalizeChecklist(customer.project_checklist));
@@ -595,11 +629,17 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
     };
 
     const fetchLogs = async () => {
-        if (!access.admin) return;
-        const { data } = await supabase.from('activity_log').select('*, profiles(name)')
-            .or(`new_value.eq.${customer.id},message.ilike.%${customer.customer_name}%`)
-            .order('created_at', { ascending: false }).limit(25);
-        if (data) setActivityLogs(data);
+        if (!access.crm) return;
+        setActivityLoading(true);
+        setActivityError('');
+        try {
+            const { data, error } = await supabase.rpc('customer_activity', { customer_id: customer.id });
+            if (error) throw error;
+            setActivityLogs(Array.isArray(data) ? data : []);
+        } catch {
+            setActivityLogs([]);
+            setActivityError('Customer history could not be loaded. Ask your admin to apply the customer history SQL update if this continues.');
+        } finally { setActivityLoading(false); }
     };
 
     useEffect(() => {
@@ -616,7 +656,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
     }, [customer.id]);
 
     useEffect(() => {
-        setLocalChecklist(normalizeChecklist(customer.project_checklist, customer));
+        if (!checklistDirty && !editingRemarkId) setLocalChecklist(normalizeChecklist(customer.project_checklist, customer));
         setEditData(prev => {
             const initialPayments = getInitialPayments(customer);
             return {
@@ -630,9 +670,28 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         });
     }, [customer.project_checklist, customer.payments, customer.follow_ups, customer.subsidy_history, customer.stages_remarks]);
 
+    // Refresh server-calculated values after a payment save without replacing other drafts.
+    useEffect(() => {
+        const calculated = {
+            total_received: customer.total_received,
+            receivables: customer.receivables,
+            payment_reciept: customer.payment_reciept,
+            financial_tag: customer.financial_tag,
+        };
+        setEditData(previous => ({ ...previous, ...calculated }));
+        baseline.current = { ...baseline.current, ...calculated };
+    }, [customer.id, customer.total_received, customer.receivables, customer.payment_reciept, customer.financial_tag]);
+
     // ── Financial values are calculated by the Supabase backend trigger.
     // The modal only edits raw financial/payment fields.
     const handleChange = (field, val) => {
+        if (field === 'quoted_amount_3' && val === '') val = null;
+        setDirtyFields(previous => {
+            const next = { ...previous };
+            if (JSON.stringify(val ?? '') === JSON.stringify(baseline.current[field] ?? '')) delete next[field];
+            else next[field] = val;
+            return next;
+        });
         setEditData(prev => ({
             ...prev,
             [field]: val
@@ -693,7 +752,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
         setSavingPayments(false);
         fetchLogs();
-        } catch (error) { setSaveError(error.message || 'Unable to save changes'); }
+        return true;
+        } catch (error) { setSaveError(error.message || 'Unable to save changes'); return false; }
         finally { setSavingPayments(false); }
     };
 
@@ -701,14 +761,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         setSaving(true);
         setSaveError('');
         try {
-        const updates = { ...editData };
-
-        for (let k = 1; editingSection === 'fin' && k <= 5; k++) {
-            const p = (updates.payments || [])[k - 1];
-            updates[`payment_${k}`] = p ? (p.amount !== '' ? Number(p.amount) : null) : null;
-            updates[`payment_remark_${k}`] = p ? (p.remark || null) : null;
-            updates[`payment_date_${k}`] = p ? (p.date || null) : null;
-        }
+        const updates = { ...dirtyFields };
 
         let changeSummary = [];
         Object.keys(updates).forEach(key => {
@@ -722,7 +775,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         setEditingSection(null);
         setSaving(false);
         fetchLogs();
-        } catch (error) { setSaveError(error.message || 'Unable to save changes'); }
+        return true;
+        } catch (error) { setSaveError(error.message || 'Unable to save changes'); return false; }
         finally { setSaving(false); }
     };
 
@@ -767,6 +821,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         if (!pendingSubsidyStatus || savingSubsidy) return;
 
         setSavingSubsidy(true);
+        setSaveError('');
+        try {
 
         const opt = SUBSIDY_STATUS_OPTIONS.find(
             o => o.id === pendingSubsidyStatus
@@ -815,6 +871,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         setPendingSubsidyRemark('');
         setSavingSubsidy(false);
         fetchLogs();
+        } catch (error) { setSaveError(error.message || 'Unable to save subsidy'); }
+        finally { setSavingSubsidy(false); }
     };
 
     const handleSoftDelete = async () => {
@@ -824,14 +882,58 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
         onClose();
     };
 
+    const discardDrafts = () => {
+        setEditData({ ...customer, ...baseline.current, payments: getInitialPayments({ ...customer, ...baseline.current }) });
+        setDirtyFields({}); setCommentText(''); setFollowUpText('');
+        setLocalChecklist(normalizeChecklist(baseline.current.project_checklist, baseline.current));
+        setChecklistDirty(false); setNewItemLabel(''); setEditingRemarkId(null);
+        setPendingSubsidyStatus(''); setPendingSubsidyRemark(''); setPendingSubsidyDate(getTodayDateString());
+        paymentDraft.current?.reset(); setPaymentDirty(false);
+        setEditingSection(null); setSaveError('');
+    };
+    const saveDrafts = async () => {
+        const patch = { ...dirtyFields };
+        const timestamp = new Date().toISOString();
+        if (paymentDraft.current?.dirty) Object.assign(patch, paymentDraft.current.collect());
+        if (checklistDirty || newItemLabel.trim()) {
+            const items = newItemLabel.trim() ? [...localChecklist, { id: `custom_${Date.now()}`, label: newItemLabel.trim(), section: 'Project Checklist', checked: false, remark: '' }] : localChecklist;
+            Object.assign(patch, checklistFields(items));
+        }
+        if (commentText.trim()) {
+            const text = commentText.trim();
+            const line = `[${formatLogDate(timestamp)}] ${user.name} (${editData.stage || 'no stage'}): ${text}`;
+            patch.internal_remarks = [patch.internal_remarks ?? editData.internal_remarks, line].filter(Boolean).join('\n');
+            patch.stages_remarks = [...(editData.stages_remarks || []), { text, author: user.name, date: timestamp, stage: editData.stage || null }];
+        }
+        if (followUpText.trim()) patch.follow_ups = [...(editData.follow_ups || []), { text: followUpText.trim(), author: user.name, date: timestamp }];
+        if (pendingSubsidyStatus) {
+            const option = SUBSIDY_STATUS_OPTIONS.find(entry => entry.id === pendingSubsidyStatus);
+            if (!option) throw new Error('Choose a valid subsidy status.');
+            const date = pendingSubsidyDate || getTodayDateString();
+            patch.subsidy_history = [...(editData.subsidy_history || []), { status: pendingSubsidyStatus, date, remark: pendingSubsidyRemark.trim(), author: user.name, created_at: timestamp }];
+            if (option.dateField) patch[option.dateField] = date;
+        }
+        if (Object.keys(patch).length) await onUpdate(customer.id, patch);
+        // One database update for all drafts; only clear them after it succeeds.
+        discardDrafts();
+        setEditData(previous => ({ ...previous, ...patch }));
+        if (patch.project_checklist) setLocalChecklist(patch.project_checklist);
+        fetchLogs();
+        return true;
+    };
+    const guard = useUnsavedChanges({
+        dirty: Object.keys(dirtyFields).length > 0 || !!commentText.trim() || !!followUpText.trim() || checklistDirty || !!newItemLabel.trim() || !!pendingSubsidyStatus || paymentDirty,
+        busy: saving || savingPayments || savingSubsidy, save: saveDrafts, discard: discardDrafts, close: onClose,
+    });
+
     const SectionHeader = ({ title, id, icon: Icon, hideEdit = false }) => (
         <div className="flex items-center justify-between mb-2 border-b border-stone-100 pb-1.5">
-            <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wide flex items-center gap-2">
                 <Icon size={13} /> {title}
             </h3>
             {!hideEdit && (
                 <button
-                    onClick={() => setEditingSection(editingSection === id ? null : id)}
+                    onClick={() => guard.request(() => setEditingSection(editingSection === id ? null : id))}
                     className="text-stone-400 hover:text-amber-600 transition-colors p-1 rounded-lg hover:bg-amber-50"
                     title={editingSection === id ? "Cancel Editing" : "Edit Section"}
                 >
@@ -842,18 +944,18 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
     );
 
     return (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div onClick={event => { if (event.target === event.currentTarget) guard.request(); }} className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-[1170px] h-[min(832px,92dvh)] overflow-hidden flex flex-col border border-stone-100">
 
                 {/* Header (Original clean format) */}
                 <div className="bg-stone-900 px-6 py-4 flex justify-between items-center flex-shrink-0">
                     <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <h2 className="text-xl font-bold text-white leading-snug break-words">{customer.customer_name}</h2>
-                        <span className="text-xs bg-white/10 text-stone-400 px-2 py-0.5 rounded font-bold uppercase tracking-widest">{customer.crn || 'NO-CRN'}</span>
+                        <h2 className="text-xl font-semibold text-white leading-snug break-words">{customer.customer_name}</h2>
+                        <span className="text-sm bg-white/10 text-stone-400 px-2 py-0.5 rounded font-semibold uppercase tracking-wide">{customer.crn || 'NO-CRN'}</span>
                     </div>
                     <div className="flex gap-2">
-                        {isAdmin && <button onClick={() => setShowDeleteConfirm(true)} className="p-2 text-white/30 hover:text-red-400"><Trash2 size={18} /></button>}
-                        <button onClick={onClose} aria-label="Close customer details" className="p-2 text-white/30 hover:text-white"><X size={20} /></button>
+                        {isAdmin && <button onClick={() => guard.request(() => setShowDeleteConfirm(true))} className="p-2 text-white/30 hover:text-red-400"><Trash2 size={18} /></button>}
+                        <button onClick={() => guard.request()} aria-label="Close customer details" className="p-2 text-white/30 hover:text-white"><X size={20} /></button>
                     </div>
                 </div>
 
@@ -866,15 +968,15 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                         { id: 'checklist', label: 'Checklist', icon: CheckSquare },
                         { id: 'history', label: 'Notes & History', icon: History },
                     ].filter(tab => tab.id === 'finance' || tab.id === 'subsidy' ? access.finance : access.crm).map(tab => (
-                        <button key={tab.id} onClick={() => { setActiveTab(tab.id); setEditingSection(null); }}
-                            className={`flex shrink-0 items-center gap-2 py-3 text-xs font-bold uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id ? 'text-amber-400 border-amber-400' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
+                        <button key={tab.id} onClick={() => { if (tab.id !== activeTab) guard.request(() => { setActiveTab(tab.id); setEditingSection(null); }); }}
+                            className={`flex shrink-0 items-center gap-2 py-3 text-sm font-semibold uppercase tracking-wide transition-all border-b-2 ${activeTab === tab.id ? 'text-amber-400 border-amber-400' : 'text-stone-500 border-transparent hover:text-stone-300'}`}>
                             <tab.icon size={12} /> {tab.label}
                         </button>
                     ))}
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto p-5 bg-[#FCFBFA]">
-                    {saveError && <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">{saveError}</p>}
+                    {saveError && <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-base text-red-700">{saveError}</p>}
 
                     {/* ── OVERVIEW ── */}
                     {activeTab === 'overview' && (
@@ -883,7 +985,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
                                 {/* Stage select */}
                                 <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm flex flex-col justify-between">
-                                    <label className="text-xs text-stone-400 font-bold uppercase mb-1 block">Primary Stage</label>
+                                    <label className="text-sm text-stone-500 font-semibold uppercase mb-1 block">Primary Stage</label>
                                     <div className="flex gap-2">
                                         <select value={editData.stage} onChange={async (e) => {
                                             const newStage = e.target.value;
@@ -892,7 +994,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                             await onUpdate(customer.id, { stage: newStage });
                                             await logActivity(user.id, 'stage_change', `STAGE: ${oldStage} → ${newStage}`, customer.id);
                                             fetchLogs();
-                                        }} className="flex-1 p-2 bg-white border border-stone-200 rounded-lg font-semibold text-xs text-stone-700 outline-none">
+                                        }} className="flex-1 p-2 bg-white border border-stone-200 rounded-lg font-semibold text-base text-stone-700 outline-none">
                                             {PRIMARY_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                                         </select>
                                         {(() => {
@@ -912,7 +1014,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                         }
                                                     }}
                                                     title={nextStage ? `Move to next stage: ${nextStage.label}` : 'Already at the final stage'}
-                                                    className="px-3 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all font-bold text-xs"
+                                                    className="px-3 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all font-semibold text-base"
                                                 >
                                                     <span className="leading-none">→</span>
                                                 </button>
@@ -923,14 +1025,14 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
                                 {/* Centralized comment box */}
                                 <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm flex flex-col justify-between">
-                                    <label className="text-xs text-stone-400 font-bold uppercase mb-1 flex items-center gap-1">
+                                    <label className="text-sm text-stone-500 font-semibold uppercase mb-1 flex items-center gap-1">
                                         <MessageSquare size={11} /> Add Comment
                                     </label>
                                     <div className="flex gap-2">
                                         <input value={commentText} onChange={e => setCommentText(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && handleAddComment()}
                                             placeholder="Note for this customer..."
-                                            className="flex-1 p-2 bg-white border border-stone-200 rounded-lg text-xs text-stone-700 outline-none focus:ring-1 focus:ring-amber-300" />
+                                            className="flex-1 p-2 bg-white border border-stone-200 rounded-lg text-base text-stone-700 outline-none focus:ring-1 focus:ring-amber-300" />
                                         <button type="button" onClick={handleAddComment} disabled={!commentText.trim()}
                                             className="px-3 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all">
                                             <Save size={13} />
@@ -974,14 +1076,14 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
                                 {/* Project Type */}
                                 <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
-                                    <label className="text-xs text-stone-400 font-bold uppercase mb-1 block">Project Type</label>
+                                    <label className="text-sm text-stone-500 font-semibold uppercase mb-1 block">Project Type</label>
                                     <select value={editData.project_type || 'General'} onChange={async (e) => {
                                         const newType = e.target.value;
                                         setEditData(prev => ({ ...prev, project_type: newType }));
                                         await onUpdate(customer.id, { project_type: newType });
                                         await logActivity(user.id, 'update', `${customer.customer_name}: Project Type changed to ${newType}`, customer.id);
                                         fetchLogs();
-                                    }} className="w-full p-2 bg-white border border-stone-200 rounded-lg font-semibold text-xs text-stone-700 outline-none">
+                                    }} className="w-full p-2 bg-white border border-stone-200 rounded-lg font-semibold text-base text-stone-700 outline-none">
                                         <option value="General">General</option>
                                         <option value="PM SURYA">PM SURYA</option>
                                     </select>
@@ -989,14 +1091,14 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
                                 {/* Financial Tag */}
                                 <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
-                                    <label className="text-xs text-stone-400 font-bold uppercase mb-1 block">Financial Tag</label>
+                                    <label className="text-sm text-stone-500 font-semibold uppercase mb-1 block">Financial Tag</label>
                                     <select value={editData.financial_tag || ''} onChange={async (e) => {
                                         const newTag = e.target.value;
                                         setEditData(prev => ({ ...prev, financial_tag: newTag }));
                                         await onUpdate(customer.id, { financial_tag: newTag });
                                         await logActivity(user.id, 'update', `${customer.customer_name}: Financial Tag updated to ${newTag}`, customer.id);
                                         fetchLogs();
-                                    }} className="w-full p-2 bg-white border border-stone-200 rounded-lg font-semibold text-xs text-stone-700 outline-none">
+                                    }} className="w-full p-2 bg-white border border-stone-200 rounded-lg font-semibold text-base text-stone-700 outline-none">
                                         <option value="">Select Tag...</option>
                                         {getFinancialTags(editData.project_type).map(tag => (
                                             <option key={tag} value={tag}>{tag}</option>
@@ -1009,9 +1111,10 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 <SectionHeader title="Financial Summary" id="fin" icon={IndianRupee} />
 
                                 {/* Row 1: Quoted (editable), Received (Read-Only), Receivable (Read-Only) */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-3">
+                                    <div className="bg-stone-50 py-2.5 px-3 rounded-2xl border border-stone-100/80"><p className="text-sm text-stone-500 uppercase font-semibold">Original quotation</p><p className="text-base font-semibold">{editData.quoted_amount == null ? "–" : fmt(editData.quoted_amount)}</p><p className="text-sm leading-5 text-stone-500 mt-1">Used when Finance is blank</p></div>
                                     <EditableDetailItem
-                                        label="Quoted Amt"
+                                        label="Finance quotation"
                                         field="quoted_amount_3"
                                         value={editData.quoted_amount_3}
                                         onChange={handleChange}
@@ -1019,20 +1122,20 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                         isEditing={editingSection === 'fin'}
                                         isMoney
                                     />
-                                    <div className="bg-stone-50 py-1.5 px-3 rounded-xl border border-stone-100/80">
-                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Received (Auto)</p>
-                                        <p className="text-sm font-semibold text-emerald-600">
+                                    <div className="bg-stone-50 py-2.5 px-3 rounded-2xl border border-stone-100/80">
+                                        <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">Received (Auto)</p>
+                                        <p className="text-base font-semibold text-emerald-700">
                                             {fmt(editData.total_received)}
                                         </p>
                                     </div>
-                                    <div className={`py-1.5 px-3 rounded-xl border ${Number(editData.receivables) === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-stone-50 border-stone-100/80 text-stone-800'}`}>
-                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">Receivable (Auto)</p>
+                                    <div className={`py-2.5 px-3 rounded-2xl border ${receivableAmount(editData) === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-stone-50 border-stone-100/80 text-stone-800'}`}>
+                                        <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">Receivable (Auto)</p>
                                         <div className="flex items-center justify-between">
-                                            <p className="text-sm font-semibold">
-                                                {fmt(editData.receivables)}
+                                            <p className="text-base font-semibold">
+                                                {fmt(receivableAmount(editData))}
                                             </p>
-                                            {Number(editData.receivables) === 0 && (
-                                                <span className="flex items-center gap-1 text-xs font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
+                                            {receivableAmount(editData) === 0 && Number(editData.total_received) > 0 && (
+                                                <span className="flex items-center gap-1 text-base font-semibold bg-emerald-600 text-white px-2 py-0.5 rounded-full">
                                                     <CheckCircle2 size={10} /> Fully Paid
                                                 </span>
                                             )}
@@ -1043,11 +1146,11 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2.5 border-t border-stone-100">
                                     <EditableDetailItem label="Date" field="date" value={editData.date} onChange={handleChange} type="date" isEditing={editingSection === 'fin'} />
                                     <EditableDetailItem label="Bill No" field="bill_no" value={editData.bill_no} onChange={handleChange} isEditing={editingSection === 'fin'} />
-                                    <div className="bg-stone-50 py-1.5 px-3 rounded-xl border border-stone-100/80">
-                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
+                                    <div className="bg-stone-50 py-2.5 px-3 rounded-2xl border border-stone-100/80">
+                                        <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">
                                             Payment Receipt Date (Auto)
                                         </p>
-                                        <p className="text-sm font-semibold text-stone-800">
+                                        <p className="text-base font-semibold text-stone-800">
                                             {editData.payment_reciept ? formatDate(editData.payment_reciept) : '–'}
                                         </p>
                                     </div>
@@ -1056,12 +1159,13 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
                             {/* Standalone Sequential Payments Section */}
                             <PaymentsManager
+                                draftRef={paymentDraft} onDraftChange={setPaymentDirty} requestNavigation={guard.request}
                                 payments={editData.payments || []}
                                 onUpdatePayments={handlePaymentsChange}
                                 onSavePayments={handleSavePayments}
                                 saving={savingPayments}
                                 projectType={editData.project_type}
-                                receivables={editData.receivables}
+                                receivables={receivableAmount(editData)}
                                 totalReceived={editData.total_received}
                                 meta={meta}
                             />
@@ -1071,12 +1175,12 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
 
                     {/* ── SUBSIDY ── */}
                     {activeTab === 'subsidy' && (
-                        <div className="space-y-4 animate-in fade-in duration-300">
+                        <div className="space-y-3 animate-in fade-in duration-300">
 
-                            <section className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
+                            <section className="bg-white p-4 rounded-3xl border border-stone-100 shadow-sm">
                                 <div className="flex items-center gap-2 mb-3 border-b border-stone-100 pb-2">
-                                    <Banknote size={13} className="text-stone-400" />
-                                    <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">
+                                    <Banknote size={18} className="text-stone-600" />
+                                    <h3 className="text-sm font-semibold text-stone-600 uppercase tracking-wide">
                                         Subsidy Status
                                     </h3>
                                 </div>
@@ -1089,14 +1193,15 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                             <button
                                                 key={opt.id}
                                                 type="button"
+                                                aria-pressed={isSelected}
                                                 onClick={() => handleSubsidyStatusClick(opt.id)}
-                                                className={`py-2 px-2.5 rounded-lg text-xs font-bold border transition-all text-center ${
+                                                className={`min-h-10 py-2 px-4 rounded-full text-base font-semibold border-2 transition-colors text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-700 focus-visible:ring-offset-2 ${
                                                     isSelected
                                                         ? opt.selected
                                                         : opt.classes
                                                 }`}
                                             >
-                                                {opt.id}
+                                                <span className="inline-flex items-center justify-center gap-2">{isSelected && <CheckCircle2 size={18} aria-hidden="true" />}{opt.id}</span>
                                             </button>
                                         );
                                     })}
@@ -1105,20 +1210,20 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 {pendingSubsidyStatus && (
                                     <div className="mt-3 pt-3 border-t border-stone-100 space-y-2.5">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
-                                                <label className="text-xs text-stone-400 uppercase tracking-wider mb-1 block font-bold">
+                                            <div className="bg-stone-50 py-2.5 px-3 rounded-2xl border border-stone-100">
+                                                <label className="text-sm text-stone-600 uppercase tracking-wider mb-1 block font-semibold">
                                                     Date
                                                 </label>
                                                 <input
                                                     type="date"
                                                     value={pendingSubsidyDate}
                                                     onChange={e => setPendingSubsidyDate(e.target.value)}
-                                                    className="w-full bg-transparent text-xs font-semibold text-stone-800 outline-none"
+                                                    className="w-full bg-transparent text-base font-semibold text-stone-800 outline-none"
                                                 />
                                             </div>
 
-                                            <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
-                                                <label className="text-xs text-stone-400 uppercase tracking-wider mb-1 block font-bold">
+                                            <div className="bg-stone-50 py-2.5 px-3 rounded-2xl border border-stone-100">
+                                                <label className="text-sm text-stone-600 uppercase tracking-wider mb-1 block font-semibold">
                                                     Remark (Optional)
                                                 </label>
                                                 <input
@@ -1126,7 +1231,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                     value={pendingSubsidyRemark}
                                                     onChange={e => setPendingSubsidyRemark(e.target.value)}
                                                     placeholder="Add a remark..."
-                                                    className="w-full bg-transparent text-xs font-semibold text-stone-800 outline-none placeholder:text-stone-300"
+                                                    className="w-full bg-transparent text-base font-semibold text-stone-800 outline-none placeholder:text-stone-500"
                                                 />
                                             </div>
                                         </div>
@@ -1135,38 +1240,38 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                             type="button"
                                             onClick={handleSaveSubsidy}
                                             disabled={savingSubsidy}
-                                            className="w-full bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                                            className="w-full sm:w-auto sm:ml-auto px-6 bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white py-2.5 rounded-full text-base font-semibold flex items-center justify-center gap-2 transition-all"
                                         >
-                                            <Save size={13} />
+                                            <Save size={18} />
                                             {savingSubsidy
                                                 ? 'Saving Subsidy Status...'
                                                 : `Save ${pendingSubsidyStatus} Status`
                                             }
                                         </button>
 
-                                        <p className="text-xs text-stone-400 text-center">
+                                        <p className="text-base text-stone-600 sm:text-right">
                                             Changes are only added to subsidy history after saving.
                                         </p>
                                     </div>
                                 )}
                             </section>
 
-                            <section className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
+                            <section className="bg-white p-4 rounded-3xl border border-stone-100 shadow-sm">
                                 <div className="flex items-center justify-between mb-3 border-b border-stone-100 pb-2">
-                                    <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">
+                                    <h3 className="text-sm font-semibold text-stone-600 uppercase tracking-wide">
                                         Current Dates
                                     </h3>
-                                    <span className="text-xs text-stone-400">
+                                    <span className="text-base text-stone-600">
                                         Saved values
                                     </span>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
-                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
+                                    <div className="bg-stone-50 py-2.5 px-3 rounded-2xl border border-stone-100">
+                                        <p className="text-sm text-stone-600 uppercase tracking-wider mb-0.5 font-semibold">
                                             Subsidy Claim
                                         </p>
-                                        <p className="text-sm font-semibold text-stone-800">
+                                        <p className="text-base font-semibold text-stone-800">
                                             {editData.subsidy_claim
                                                 ? formatDate(editData.subsidy_claim)
                                                 : '–'
@@ -1174,11 +1279,11 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                         </p>
                                     </div>
 
-                                    <div className="bg-stone-50 py-2 px-3 rounded-xl border border-stone-100">
-                                        <p className="text-xs text-stone-400 uppercase tracking-wider mb-0.5 font-bold">
+                                    <div className="bg-stone-50 py-2.5 px-3 rounded-2xl border border-stone-100">
+                                        <p className="text-sm text-stone-600 uppercase tracking-wider mb-0.5 font-semibold">
                                             Subsidy Received
                                         </p>
-                                        <p className="text-sm font-semibold text-stone-800">
+                                        <p className="text-base font-semibold text-stone-800">
                                             {editData.subsidy_received
                                                 ? formatDate(editData.subsidy_received)
                                                 : '–'
@@ -1188,13 +1293,13 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 </div>
                             </section>
 
-                            <section className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
-                                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 border-b border-stone-100 pb-2">
+                            <section className="bg-white p-4 rounded-3xl border border-stone-100 shadow-sm">
+                                <h3 className="text-sm font-semibold text-stone-600 uppercase tracking-wide mb-3 border-b border-stone-100 pb-2">
                                     Subsidy History
                                 </h3>
 
                                 {(editData.subsidy_history || []).length === 0 ? (
-                                    <p className="text-xs text-stone-400 italic">
+                                    <p className="text-base text-stone-600 italic">
                                         No subsidy history recorded
                                     </p>
                                 ) : (
@@ -1208,55 +1313,55 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                 return (
                                                     <details
                                                         key={`${h.date || 'date'}-${h.status || 'status'}-${i}`}
-                                                        className="bg-stone-50 rounded-xl border border-stone-100 overflow-hidden"
+                                                        className="bg-stone-50 rounded-2xl border border-stone-100 overflow-hidden"
                                                     >
                                                         <summary className="cursor-pointer list-none px-3 py-2.5 flex items-center justify-between gap-3">
                                                             <div className="flex items-center gap-2 min-w-0">
-                                                                <span className="font-bold text-xs text-stone-700">
+                                                                <span className={`inline-flex px-3 py-1 rounded-full border text-base font-semibold ${SUBSIDY_STATUS_OPTIONS.find(option => option.id === h.status)?.classes || "bg-stone-100 text-stone-700 border-stone-200"}`}>
                                                                     {h.status || 'Status'}
                                                                 </span>
 
                                                                 {remark && (
-                                                                    <span className="text-xs text-stone-400 truncate">
+                                                                    <span className="text-base text-stone-600 truncate">
                                                                         · {remark}
                                                                     </span>
                                                                 )}
                                                             </div>
 
-                                                            <span className="text-xs text-stone-400 flex-shrink-0">
+                                                            <span className="text-base text-stone-600 flex-shrink-0">
                                                                 {h.date ? formatDate(h.date) : '–'}
                                                             </span>
                                                         </summary>
 
                                                         <div className="px-3 pb-3 pt-2 border-t border-stone-100 space-y-2">
                                                             <div>
-                                                                <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider">
+                                                                <p className="text-sm text-stone-600 uppercase font-semibold tracking-wider">
                                                                     Date
                                                                 </p>
-                                                                <p className="text-xs font-semibold text-stone-700 mt-0.5">
+                                                                <p className="text-base font-semibold text-stone-700 mt-0.5">
                                                                     {h.date ? formatDate(h.date) : '–'}
                                                                 </p>
                                                             </div>
 
                                                             <div>
-                                                                <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider">
+                                                                <p className="text-sm text-stone-600 uppercase font-semibold tracking-wider">
                                                                     By
                                                                 </p>
-                                                                <p className="text-xs font-semibold text-stone-700 mt-0.5">
+                                                                <p className="text-base font-semibold text-stone-700 mt-0.5">
                                                                     {h.author || 'Unknown'}
                                                                 </p>
                                                             </div>
 
                                                             <div>
-                                                                <p className="text-[9px] text-stone-400 uppercase font-bold tracking-wider">
+                                                                <p className="text-sm text-stone-600 uppercase font-semibold tracking-wider">
                                                                     Remark
                                                                 </p>
                                                                 {remark ? (
-                                                                    <p className="text-xs text-stone-700 mt-0.5 whitespace-pre-wrap break-words">
+                                                                    <p className="text-base text-stone-700 mt-0.5 whitespace-pre-wrap break-words">
                                                                         {remark}
                                                                     </p>
                                                                 ) : (
-                                                                    <p className="text-xs text-stone-400 italic mt-0.5">
+                                                                    <p className="text-base text-stone-600 italic mt-0.5">
                                                                         No remark added
                                                                     </p>
                                                                 )}
@@ -1276,7 +1381,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                         <div className="space-y-4 animate-in fade-in duration-300">
                             {checklistDirty && (
                                 <div className="flex items-center justify-between bg-amber-50/60 p-3 px-4 rounded-xl border border-amber-100 mb-3">
-                                    <span className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
+                                    <span className="text-base font-semibold text-amber-800 flex items-center gap-1.5">
                                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
                                         Unsaved changes in checklist
                                     </span>
@@ -1297,17 +1402,17 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                         setChecklistDirty(false);
                                         fetchLogs();
                                     }}
-                                        className="bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-amber-700 transition-colors">Save Checklist</button>
+                                        className="bg-amber-600 text-white px-3 py-1.5 rounded-lg text-base font-semibold shadow-sm hover:bg-amber-700 transition-colors">Save Checklist</button>
                                 </div>
                             )}
 
                             {/* Add Custom Item Section */}
                             <div className="bg-white p-4 rounded-xl border border-stone-100 shadow-sm mb-3">
-                                <h4 className="text-xs font-bold text-stone-400 mb-2.5 uppercase tracking-widest border-b border-stone-50 pb-1.5">Add Custom Checklist Item</h4>
+                                <h4 className="text-sm font-semibold text-stone-400 mb-2.5 uppercase tracking-wide border-b border-stone-50 pb-1.5">Add Custom Checklist Item</h4>
                                 <div className="flex gap-2">
                                     <input type="text" placeholder="e.g. Verify solar net meter application..." value={newItemLabel}
                                         onChange={e => setNewItemLabel(e.target.value)}
-                                        className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-amber-400" />
+                                        className="flex-1 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-base outline-none focus:ring-1 focus:ring-amber-400" />
                                     <button onClick={() => {
                                         const label = newItemLabel.trim();
                                         if (!label) return;
@@ -1321,7 +1426,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                         setLocalChecklist([...localChecklist, newItem]);
                                         setNewItemLabel('');
                                         setChecklistDirty(true);
-                                    }} className="bg-stone-900 text-white px-4 rounded-lg text-xs font-bold hover:bg-stone-800 transition-all flex items-center gap-1.5">
+                                    }} className="bg-stone-900 text-white px-4 rounded-lg text-base font-semibold hover:bg-stone-800 transition-all flex items-center gap-1.5">
                                         <Plus className="w-3.5 h-3.5" /> Add
                                     </button>
                                 </div>
@@ -1330,7 +1435,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                             <div className="space-y-3">
                                 {sections.map(sec => (
                                     <div key={sec} className="bg-white p-4 rounded-xl border border-stone-100 shadow-sm">
-                                        <h4 className="text-xs font-bold text-stone-400 mb-3 uppercase tracking-widest border-b border-stone-50 pb-1.5">{sec}</h4>
+                                        <h4 className="text-sm font-semibold text-stone-400 mb-3 uppercase tracking-wide border-b border-stone-50 pb-1.5">{sec}</h4>
                                         <div className="flex flex-col gap-2">
                                             {localChecklist.filter(i => i.section === sec).map(item => (
                                                 <div key={item.id} className="py-1.5 px-3 bg-stone-50/50 rounded-xl border border-stone-100 hover:border-stone-200 transition-all flex items-center justify-between gap-3">
@@ -1340,33 +1445,33 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                                             setLocalChecklist(updated); setChecklistDirty(true);
                                                         }} className="mt-0.5 rounded border-stone-300 text-amber-500 focus:ring-amber-500 cursor-pointer" />
                                                         <div className="flex-1 min-w-0">
-                                                            <span className={`text-xs block font-semibold ${item.checked ? 'text-stone-400 line-through font-normal' : 'text-stone-700'}`}>{item.label}</span>
-                                                            {item.checked && <span className="text-xs text-stone-400 font-bold uppercase mt-0.5 block">By {item.checkedBy} on {formatLogDate(item.checkedAt)}</span>}
+                                                            <span className={`text-base block font-semibold ${item.checked ? 'text-stone-400 line-through font-normal' : 'text-stone-700'}`}>{item.label}</span>
+                                                            {item.checked && <span className="text-sm text-stone-500 font-semibold uppercase mt-0.5 block">By {item.checkedBy} on {formatLogDate(item.checkedAt)}</span>}
                                                         </div>
                                                     </label>
 
-                                                    <div className="flex items-center gap-2 text-xs flex-shrink-0">
+                                                    <div className="flex items-center gap-2 text-base flex-shrink-0">
                                                         {(item.id === 'panel_and_inverter' || item.id === 'fabrication_and_wiring') ? (
                                                             editingRemarkId === item.id ? (
                                                                 <div className="flex gap-1.5 items-center">
-                                                                    <input type="text" placeholder="Remark..." defaultValue={item.remark || ''}
+                                                                    <input type="text" placeholder="Remark..." value={item.remark || ''} onChange={event => { setLocalChecklist(items => items.map(entry => entry.id === item.id ? { ...entry, remark: event.target.value } : entry)); setChecklistDirty(true); }}
                                                                         id={`remark_input_${item.id}`}
-                                                                        className="bg-white border border-stone-200 rounded-lg px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-amber-300 w-32 sm:w-40" />
+                                                                        className="bg-white border border-stone-200 rounded-lg px-2 py-1 text-base outline-none focus:ring-1 focus:ring-amber-300 w-32 sm:w-40" />
                                                                     <button onClick={() => {
                                                                         const val = document.getElementById(`remark_input_${item.id}`).value.trim();
                                                                         const updated = localChecklist.map(i => i.id === item.id ? { ...i, remark: val } : i);
                                                                         setLocalChecklist(updated);
                                                                         setChecklistDirty(true);
                                                                         setEditingRemarkId(null);
-                                                                    }} className="bg-stone-900 text-white px-2 py-1 rounded-lg text-xs font-bold hover:bg-stone-800 transition-colors">Done</button>
-                                                                    <button onClick={() => setEditingRemarkId(null)} className="text-stone-400 hover:text-stone-600 text-xs font-medium">Cancel</button>
+                                                                    }} className="bg-stone-900 text-white px-2 py-1 rounded-lg text-base font-semibold hover:bg-stone-800 transition-colors">Done</button>
+                                                                    <button onClick={() => setEditingRemarkId(null)} className="text-stone-400 hover:text-stone-600 text-base font-medium">Cancel</button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex items-center gap-2">
                                                                     {item.remark ? (
                                                                         <div className="flex items-center gap-1.5 bg-amber-50/50 text-stone-600 px-2 py-1 rounded-lg border border-amber-100">
                                                                             <span className="font-medium italic">Remark: {item.remark}</span>
-                                                                            <button onClick={() => setEditingRemarkId(item.id)} className="text-amber-600 hover:text-amber-700 font-bold transition-colors">Edit</button>
+                                                                            <button onClick={() => setEditingRemarkId(item.id)} className="text-amber-600 hover:text-amber-700 font-semibold transition-colors">Edit</button>
                                                                         </div>
                                                                     ) : (
                                                                         <button onClick={() => setEditingRemarkId(item.id)} className="text-stone-400 hover:text-stone-600 font-semibold transition-colors flex items-center gap-1 border border-stone-200 hover:bg-stone-50 px-2 py-1 rounded-lg">
@@ -1401,22 +1506,22 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                 <SectionHeader title="Internal Remarks (Staff Only)" id="rem" icon={ShieldCheck} />
                                 {editingSection === 'rem' ? (
                                     <textarea value={editData.internal_remarks || ''} onChange={e => handleChange('internal_remarks', e.target.value)}
-                                        className="w-full p-4 border rounded-2xl text-sm bg-stone-50 focus:ring-1 focus:ring-amber-400 outline-none" rows={4}
+                                        className="w-full p-4 border rounded-2xl text-base bg-stone-50 focus:ring-1 focus:ring-amber-400 outline-none" rows={4}
                                         placeholder="Sensitive notes visible only to internal staff..." />
                                 ) : (
-                                    <div className="bg-stone-100/50 p-4 rounded-2xl border border-stone-200 text-sm text-stone-600 italic whitespace-pre-wrap">
+                                    <div className="bg-stone-100/50 p-4 rounded-2xl border border-stone-200 text-base text-stone-600 italic whitespace-pre-wrap">
                                         {editData.internal_remarks || 'No internal remarks recorded yet.'}
                                     </div>
                                 )}
                             </section>
 
                             <section>
-                                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-6">Activity Notes</h3>
+                                <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-6">Activity Notes</h3>
                                 <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2">
                                     {(editData.follow_ups || []).slice().reverse().map((f, i) => (
                                         <div key={i} className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm">
-                                            <p className="text-xs text-stone-800 leading-relaxed">{f.text}</p>
-                                            <div className="flex justify-between mt-2.5 text-xs text-stone-400 font-bold uppercase">
+                                            <p className="text-sm text-stone-800 leading-relaxed">{f.text}</p>
+                                            <div className="flex justify-between mt-2 text-xs text-stone-500">
                                                 <span>{f.author}</span><span>{formatLogDate(f.date)}</span>
                                             </div>
                                         </div>
@@ -1426,38 +1531,18 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                                     <input value={followUpText} onChange={e => setFollowUpText(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && handleAddNote()}
                                         placeholder="Share an update with the team..."
-                                        className="flex-1 px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm outline-none focus:ring-1 focus:ring-amber-400" />
+                                        className="flex-1 px-4 py-3 bg-white border border-stone-200 rounded-xl text-base outline-none focus:ring-1 focus:ring-amber-400" />
                                     <button onClick={handleAddNote} className="bg-stone-900 text-white px-6 rounded-xl hover:bg-stone-800 transition-all flex items-center justify-center">
                                         <Send size={16} />
                                     </button>
                                 </div>
                             </section>
 
-                            {access.admin && <section>
-                                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-6">Detailed System History</h3>
-                                <div className="space-y-4">
-                                    {activityLogs.length > 0 ? activityLogs.map((log, i) => (
-                                        <div key={i} className="relative pl-6 pb-4 border-l border-stone-100 last:border-0">
-                                            <div className="absolute -left-[4.5px] top-0 w-2 h-2 rounded-full bg-white border-2 border-amber-500 shadow-sm" />
-                                            <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm -mt-1.5 hover:border-amber-200 transition-colors">
-                                                <div className="flex justify-between items-start mb-1.5">
-                                                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold uppercase ${ACTION_COLORS[log.action] || 'bg-stone-100 text-stone-600'}`}>{log.action}</span>
-                                                    <span className="text-xs text-stone-400 font-bold">{formatLogDate(log.created_at)}</span>
-                                                </div>
-                                                <div className="text-xs text-stone-700 font-medium whitespace-pre-wrap leading-relaxed">
-                                                    {log.message.includes('|') ? (
-                                                        <div className="space-y-1">
-                                                            {log.message.split('|').map((line, idx) => (
-                                                                <div key={idx} className="flex items-center gap-1"><span className="text-stone-400">↳</span> {line.trim()}</div>
-                                                            ))}
-                                                        </div>
-                                                    ) : log.message}
-                                                </div>
-                                                <p className="text-xs text-stone-400 font-bold uppercase mt-2 border-t border-stone-50 pt-1.5">User: {log.profiles?.name || 'System'}</p>
-                                            </div>
-                                        </div>
-                                    )) : <p className="text-xs text-stone-400 italic">No timeline entries found.</p>}
-                                </div>
+                            {access.crm && <section>
+                                <h3 className="text-sm font-semibold text-stone-600 uppercase tracking-wide mb-2">Customer Activity History</h3>
+                                {activityLoading && <p className="text-sm text-stone-500">Loading history…</p>}
+                                {activityError && <div role="alert" className="text-sm text-red-700 mb-3">{activityError}<button type="button" onClick={fetchLogs} className="ml-2 underline">Retry</button></div>}
+                                {!activityLoading && !activityError && <ActivityHistory key={customer.id} logs={activityLogs} limit={50} emptyText="No activity recorded for this customer yet." />}
                             </section>}
                         </div>
                     )}
@@ -1467,12 +1552,14 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                 {editingSection && (
                     <div className="p-4 border-t border-stone-100 bg-white flex-shrink-0">
                         <button onClick={handleSave} disabled={saving}
-                            className="w-full bg-stone-900 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-800 transition-all">
+                            className="w-full bg-stone-900 text-white py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-stone-800 transition-all">
                             {saving ? 'Saving Changes...' : <><Save size={16} /> Save Changes</>}
                         </button>
                     </div>
                 )}
             </div>
+
+            {guard.dialog && <UnsavedChanges {...guard.dialog} allowLeave={false} saveLabel="Save and exit" />}
 
             {/* Soft-delete confirm */}
             {showDeleteConfirm && (
@@ -1480,14 +1567,14 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate, onDel
                     <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-2 bg-red-100 rounded-full"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
-                            <h3 className="font-bold text-stone-800">Move to Trash?</h3>
+                            <h3 className="font-semibold text-stone-800">Move to Trash?</h3>
                         </div>
-                        <p className="text-sm text-stone-600 mb-5">
+                        <p className="text-base text-stone-600 mb-5">
                             <strong>{customer.customer_name}</strong> will be moved to Trash. You can recover it later from the Trash view.
                         </p>
                         <div className="flex gap-3">
-                            <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 border border-stone-300 text-stone-700 rounded-xl text-sm font-medium">Cancel</button>
-                            <button onClick={handleSoftDelete} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2">
+                            <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 border border-stone-300 text-stone-700 rounded-xl text-base font-medium">Cancel</button>
+                            <button onClick={handleSoftDelete} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-base font-medium flex items-center justify-center gap-2">
                                 <Trash2 className="w-4 h-4" /> Move to Trash
                             </button>
                         </div>

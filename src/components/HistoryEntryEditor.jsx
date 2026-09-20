@@ -48,7 +48,7 @@ export default function HistoryEntryEditor({
 
     // ── READ-ONLY view ──
     if (!isEditing) {
-        if (entries.length === 0) return <p className="text-xs text-stone-400 italic">{emptyText}</p>;
+        if (entries.length === 0) return <p className="text-sm text-stone-500">{emptyText}</p>;
         return (
             <div className="space-y-2">
                 {entries.map((e, i) => {
@@ -56,12 +56,12 @@ export default function HistoryEntryEditor({
                     return (
                         <div key={i} className="bg-stone-50 p-3 rounded-xl">
                             <div className="flex justify-between items-center mb-1">
-                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${colorClass}`}>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold uppercase ${colorClass}`}>
                                     {e.status}
                                 </span>
                                 {e.date && <p className="text-xs text-stone-400">{e.date}</p>}
                             </div>
-                            {e.remark && <p className="text-xs text-stone-600 mt-1">{e.remark}</p>}
+                            {e.remark && <p className="text-sm text-stone-600 mt-1">{e.remark}</p>}
                         </div>
                     );
                 })}
@@ -75,7 +75,7 @@ export default function HistoryEntryEditor({
             {entries.map((e, i) => (
                 <div key={i} className="bg-stone-50 p-3 rounded-xl space-y-2 border border-stone-200">
                     <div className="flex items-center justify-between">
-                        <p className="text-[9px] font-bold text-stone-400 uppercase">{title} {i + 1}</p>
+                        <p className="text-xs font-semibold text-stone-400 uppercase">{title} {i + 1}</p>
                         <button onClick={() => removeEntry(i)} className="text-red-400 hover:text-red-600">
                             <Trash2 className="w-3.5 h-3.5" />
                         </button>

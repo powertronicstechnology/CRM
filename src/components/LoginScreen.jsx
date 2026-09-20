@@ -1,3 +1,4 @@
+import { passwordResetUrl } from '../passwordRecovery.js';
 // ─── LoginScreen.jsx ──────────────────────────────────────────────────────────
 import { useState } from 'react';
 import { supabase } from '../supabase';
@@ -66,7 +67,7 @@ export default function LoginScreen({ onLogin }) {
         setResetStatus('');
         try {
             const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
-                redirectTo: 'https://watersun9.github.io/CRM/',
+                redirectTo: passwordResetUrl(),
             });
             if (error) throw error;
             setResetStatus('sent');
@@ -84,7 +85,7 @@ export default function LoginScreen({ onLogin }) {
                 <div className="w-16 h-16 bg-amber-500 rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-lg shadow-amber-200">
                     <Sun size={32} />
                 </div>
-                <h1 className="text-2xl font-bold text-stone-800 tracking-tight">POWERTRONICS</h1>
+                <h1 className="text-2xl font-semibold text-stone-800 tracking-tight">POWERTRONICS</h1>
                 <p className="text-stone-400 font-medium text-xs mb-10 mt-1">Administrative Management Portal</p>
 
                 {!showForgot ? (
@@ -115,7 +116,7 @@ export default function LoginScreen({ onLogin }) {
                         </div>
                         {error && <p className="text-red-500 text-xs mb-4 bg-red-50 p-2 rounded-xl">{error}</p>}
                         <button type="submit" disabled={loading}
-                            className="w-full bg-stone-800 text-white py-4 rounded-2xl font-bold hover:bg-stone-900 transition-all shadow-lg shadow-stone-200 flex items-center justify-center gap-2 disabled:opacity-60">
+                            className="w-full bg-stone-800 text-white py-4 rounded-2xl font-semibold hover:bg-stone-900 transition-all shadow-lg shadow-stone-200 flex items-center justify-center gap-2 disabled:opacity-60">
                             {loading ? 'Entering Portal...' : <><Sparkles size={16} /> Access Portal</>}
                         </button>
                     </form>
@@ -145,7 +146,7 @@ export default function LoginScreen({ onLogin }) {
                             <p className="text-red-500 text-xs mb-4 bg-red-50 p-2 rounded-xl">{resetError}</p>
                         )}
                         <button type="submit" disabled={resetLoading || resetStatus === 'sent'}
-                            className="w-full bg-stone-800 text-white py-4 rounded-2xl font-bold hover:bg-stone-900 transition-all shadow-lg shadow-stone-200 flex items-center justify-center gap-2 disabled:opacity-60 mb-4">
+                            className="w-full bg-stone-800 text-white py-4 rounded-2xl font-semibold hover:bg-stone-900 transition-all shadow-lg shadow-stone-200 flex items-center justify-center gap-2 disabled:opacity-60 mb-4">
                             {resetLoading ? 'Sending...' : resetStatus === 'sent' ? 'Email Sent ✓' : 'Send Reset Link'}
                         </button>
                         <button type="button" onClick={() => { setShowForgot(false); setResetStatus(''); setResetError(''); }}

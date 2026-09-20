@@ -1,3 +1,5 @@
+import { quotationAmount } from '../quotation.js';
+import QuotationValue from './QuotationValue.jsx';
 import { useState } from 'react';
 import { Tag } from 'lucide-react';
 import { FINANCIAL_TAGS, FINANCIAL_TAG_COLORS } from '../constants';
@@ -60,9 +62,7 @@ export default function FinancialView({
      * Receivable = Quoted Amount - Total Received
      */
     const totals = tagged.reduce((acc, c) => {
-        const quotedVal = Number(
-            c.quoted_amount || c.total_cost || 0
-        );
+        const quotedVal = quotationAmount(c);
 
         const receivedVal = Number(c.total_received) || 0;
 
@@ -134,11 +134,11 @@ export default function FinancialView({
 
                 {/* Total Quoted */}
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
-                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">
+                    <p className="text-xs font-semibold text-stone-500 tracking-normal mb-1">
                         Total Quoted
                     </p>
 
-                    <p className="text-2xl font-bold text-stone-800">
+                    <p className="text-2xl font-semibold text-stone-800">
                         {formatIndianCurrency(
                             totals.quoted,
                             true
@@ -148,11 +148,11 @@ export default function FinancialView({
 
                 {/* Total Received */}
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
-                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">
+                    <p className="text-xs font-semibold text-stone-500 tracking-normal mb-1">
                         Total Received
                     </p>
 
-                    <p className="text-2xl font-bold text-emerald-600">
+                    <p className="text-2xl font-semibold text-emerald-700">
                         {formatIndianCurrency(
                             totals.received,
                             true
@@ -162,11 +162,11 @@ export default function FinancialView({
 
                 {/* Total Receivable */}
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm border-b-4 border-b-orange-400">
-                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">
+                    <p className="text-xs font-semibold text-stone-500 tracking-normal mb-1">
                         Total Receivable
                     </p>
 
-                    <p className="text-2xl font-bold text-orange-600">
+                    <p className="text-2xl font-semibold text-amber-700">
                         {formatIndianCurrency(
                             totals.receivable,
                             true
@@ -190,11 +190,11 @@ export default function FinancialView({
                             : 'bg-white border-stone-100 text-stone-800 hover:border-stone-200'
                         }`}
                 >
-                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-60">
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-1 opacity-60">
                         All Tagged
                     </p>
 
-                    <p className="text-2xl font-bold">
+                    <p className="text-lg font-semibold">
                         {tagged.length}
                     </p>
                 </button>
@@ -232,13 +232,13 @@ export default function FinancialView({
                                 } ${colors.bg} ${colors.border}`}
                         >
                             <p
-                                className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${colors.text}`}
+                                className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${colors.text}`}
                             >
                                 {tag.label}
                             </p>
 
                             <p
-                                className={`text-xl font-bold ${colors.text}`}
+                                className={`text-xl font-semibold ${colors.text}`}
                             >
                                 {groupCount}
                             </p>
@@ -262,11 +262,11 @@ export default function FinancialView({
                                 : ''
                             } bg-stone-50 border-stone-200`}
                     >
-                        <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5 text-stone-700">
+                        <p className="text-xs font-semibold uppercase tracking-wide mb-0.5 text-stone-700">
                             Others
                         </p>
 
-                        <p className="text-xl font-bold text-stone-700">
+                        <p className="text-xl font-semibold text-stone-700">
                             {others.length}
                         </p>
                     </button>
@@ -321,12 +321,12 @@ export default function FinancialView({
                                 className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colors.dot}`}
                             />
 
-                            <h3 className="text-xs font-bold text-stone-700 uppercase tracking-widest">
+                            <h3 className="text-xs font-semibold text-stone-700 uppercase tracking-wide">
                                 {tag.label}
                             </h3>
 
                             <span
-                                className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border ${colors.bg} ${colors.text} ${colors.border}`}
+                                className={`ml-auto text-xs px-2 py-0.5 rounded-full font-semibold border ${colors.bg} ${colors.text} ${colors.border}`}
                             >
                                 {group.length}
                             </span>
@@ -340,11 +340,7 @@ export default function FinancialView({
                             {group.map(c => {
 
                                 const quotedVal =
-                                    Number(
-                                        c.quoted_amount ||
-                                        c.total_cost ||
-                                        0
-                                    );
+                                    quotationAmount(c);
 
                                 const totalRec =
                                     Number(
@@ -373,11 +369,11 @@ export default function FinancialView({
 
                                             <div>
 
-                                                <p className="font-bold text-stone-800 text-sm group-hover:text-amber-600 transition-colors">
+                                                <p className="font-semibold text-stone-800 text-sm group-hover:text-amber-600 transition-colors">
                                                     {c.customer_name}
                                                 </p>
 
-                                                <p className="text-[10px] text-stone-400 font-medium mt-0.5">
+                                                <p className="text-xs text-stone-400 font-medium mt-0.5">
                                                     {c.crn || 'No CRN'}
                                                     {' · '}
                                                     {c.area || 'No Area'}
@@ -393,26 +389,23 @@ export default function FinancialView({
 
                                             {/* Quoted */}
                                             <div>
-                                                <p className="text-[9px] text-stone-400 font-bold uppercase">
+                                                <p className="text-xs text-stone-400 font-semibold uppercase">
                                                     Quoted
                                                 </p>
 
-                                                <p className="text-xs font-bold text-stone-700">
-                                                    {formatIndianCurrency(
-                                                        quotedVal,
-                                                        true
-                                                    )}
+                                                <p className="text-xs font-semibold text-stone-700">
+                                                    <QuotationValue record={c} />
                                                 </p>
                                             </div>
 
 
                                             {/* Received */}
                                             <div>
-                                                <p className="text-[9px] text-stone-400 font-bold uppercase">
+                                                <p className="text-xs text-stone-400 font-semibold uppercase">
                                                     Received
                                                 </p>
 
-                                                <p className="text-xs font-bold text-emerald-600">
+                                                <p className="text-xs font-semibold text-emerald-700">
                                                     {formatIndianCurrency(
                                                         totalRec,
                                                         true
@@ -423,14 +416,14 @@ export default function FinancialView({
 
                                             {/* Pending */}
                                             <div>
-                                                <p className="text-[9px] text-stone-400 font-bold uppercase">
+                                                <p className="text-xs text-stone-400 font-semibold uppercase">
                                                     Pending
                                                 </p>
 
                                                 <p
-                                                    className={`text-xs font-bold ${recv > 0
-                                                            ? 'text-orange-500'
-                                                            : 'text-emerald-500'
+                                                    className={`text-xs font-semibold ${recv > 0
+                                                            ? 'text-amber-700'
+                                                            : 'text-emerald-700'
                                                         }`}
                                                 >
                                                     {formatIndianCurrency(
@@ -463,11 +456,11 @@ export default function FinancialView({
 
                         <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-stone-400" />
 
-                        <h3 className="text-xs font-bold text-stone-700 uppercase tracking-widest">
+                        <h3 className="text-xs font-semibold text-stone-700 uppercase tracking-wide">
                             Others
                         </h3>
 
-                        <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold border bg-stone-50 text-stone-700 border-stone-200">
+                        <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-semibold border bg-stone-50 text-stone-700 border-stone-200">
                             {others.length}
                         </span>
 
@@ -480,11 +473,7 @@ export default function FinancialView({
                         {others.map(c => {
 
                             const quotedVal =
-                                Number(
-                                    c.quoted_amount ||
-                                    c.total_cost ||
-                                    0
-                                );
+                                quotationAmount(c);
 
                             const totalRec =
                                 Number(
@@ -510,11 +499,11 @@ export default function FinancialView({
 
                                         <div>
 
-                                            <p className="font-bold text-stone-800 text-sm group-hover:text-amber-600 transition-colors">
+                                            <p className="font-semibold text-stone-800 text-sm group-hover:text-amber-600 transition-colors">
                                                 {c.customer_name}
                                             </p>
 
-                                            <p className="text-[10px] text-stone-400 font-medium mt-0.5">
+                                            <p className="text-xs text-stone-400 font-medium mt-0.5">
                                                 {c.crn || 'No CRN'}
                                                 {' · '}
                                                 {c.area || 'No Area'}
@@ -530,26 +519,23 @@ export default function FinancialView({
 
                                         {/* Quoted */}
                                         <div>
-                                            <p className="text-[9px] text-stone-400 font-bold uppercase">
+                                            <p className="text-xs text-stone-400 font-semibold uppercase">
                                                 Quoted
                                             </p>
 
-                                            <p className="text-xs font-bold text-stone-700">
-                                                {formatIndianCurrency(
-                                                    quotedVal,
-                                                    true
-                                                )}
+                                            <p className="text-xs font-semibold text-stone-700">
+                                                <QuotationValue record={c} />
                                             </p>
                                         </div>
 
 
                                         {/* Received */}
                                         <div>
-                                            <p className="text-[9px] text-stone-400 font-bold uppercase">
+                                            <p className="text-xs text-stone-400 font-semibold uppercase">
                                                 Received
                                             </p>
 
-                                            <p className="text-xs font-bold text-emerald-600">
+                                            <p className="text-xs font-semibold text-emerald-700">
                                                 {formatIndianCurrency(
                                                     totalRec,
                                                     true
@@ -560,14 +546,14 @@ export default function FinancialView({
 
                                         {/* Pending */}
                                         <div>
-                                            <p className="text-[9px] text-stone-400 font-bold uppercase">
+                                            <p className="text-xs text-stone-400 font-semibold uppercase">
                                                 Pending
                                             </p>
 
                                             <p
-                                                className={`text-xs font-bold ${recv > 0
-                                                        ? 'text-orange-500'
-                                                        : 'text-emerald-500'
+                                                className={`text-xs font-semibold ${recv > 0
+                                                        ? 'text-amber-700'
+                                                        : 'text-emerald-700'
                                                     }`}
                                             >
                                                 {formatIndianCurrency(

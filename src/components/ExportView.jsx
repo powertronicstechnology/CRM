@@ -32,14 +32,14 @@ export default function ExportView({ records, filteredRecords, userType, monthLa
     return (
         <div className="space-y-6 min-w-0">
             <div>
-                <h1 className="text-2xl font-bold text-stone-900">Prepare your export</h1>
+                <h1 className="text-xl font-semibold text-stone-900">Prepare your export</h1>
                 <p className="mt-2 text-sm text-stone-500">Choose your sheets, review the records, then download an Excel workbook.</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" role="group" aria-label="Export type">
                 {options.map(option => <button key={option.id} onClick={() => { setSelection(option.id); setMessage(''); }} aria-pressed={selection === option.id}
                     className={`text-left p-6 rounded-3xl border-2 transition-colors ${selection === option.id ? 'border-amber-400 bg-amber-50' : 'border-stone-100 bg-white hover:border-stone-200'}`}>
                     <FileSpreadsheet className="w-6 h-6 text-amber-600 mb-3" />
-                    <span className="block text-lg font-bold text-stone-900">{option.label}</span>
+                    <span className="block text-lg font-semibold text-stone-900">{option.label}</span>
                     <span className="block mt-1 text-sm text-stone-500">{option.detail}</span>
                 </button>)}
             </div>
@@ -63,13 +63,13 @@ export default function ExportView({ records, filteredRecords, userType, monthLa
             {message && <p role="status" className="rounded-2xl p-4 bg-emerald-50 text-emerald-700">{message}</p>}
             <section className="bg-white rounded-3xl border border-stone-100 overflow-hidden min-w-0">
                 <div className="p-6 flex flex-wrap items-center justify-between gap-3">
-                    <div><h2 className="text-lg font-bold text-stone-900">Workbook preview</h2><p className="text-sm text-stone-500 mt-1">First {Math.min(count, 10)} of {count} records. Download includes every matching record.</p></div>
+                    <div><h2 className="text-lg font-semibold text-stone-900">Workbook preview</h2><p className="text-sm text-stone-500 mt-1">First {Math.min(count, 10)} of {count} records. Download includes every matching record.</p></div>
                     <div className="flex gap-2" role="group" aria-label="Preview sheet">{sheets.map(sheet => <button key={sheet.name} onClick={() => setPreviewName(sheet.name)} aria-pressed={preview.name === sheet.name}
                         className={`px-4 py-2 rounded-xl text-sm font-semibold ${preview.name === sheet.name ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'}`}>{sheet.name}</button>)}</div>
                 </div>
                 <div className="overflow-auto max-h-[460px]" tabIndex={0} role="region" aria-label={`${preview.name} sheet preview`}>
                     <table className="text-sm border-collapse w-max min-w-full">
-                        <thead className="sticky top-0 bg-stone-100"><tr>{preview.columns.map((col, i) => <th key={i} className="text-left px-4 py-3 text-xs font-bold text-stone-600 whitespace-nowrap">{col.header}</th>)}</tr></thead>
+                        <thead className="sticky top-0 bg-stone-100"><tr>{preview.columns.map((col, i) => <th key={i} className="text-left px-4 py-3 text-xs font-semibold text-stone-600 whitespace-nowrap">{col.header}</th>)}</tr></thead>
                         <tbody>{preview.rows.slice(0, 10).map((row, i) => <tr key={i} className="border-t border-stone-100 even:bg-stone-50/50">{row.map((value, j) => <td key={j} title={String(value)} className="px-4 py-3 max-w-[320px] truncate text-stone-700">{String(value)}</td>)}</tr>)}</tbody>
                     </table>
                     {!count && <p className="p-8 text-stone-500">{disabled ? 'Records are loading or unavailable.' : 'No records match this selection.'}</p>}

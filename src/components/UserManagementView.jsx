@@ -1,3 +1,4 @@
+import { passwordResetUrl } from '../passwordRecovery.js';
 // ─── UserManagementView.jsx ───────────────────────────────────────────────────
 // Admin view: list, create, role-update, and deactivate users.
 // USER_TYPE_OPTIONS / ROLE_OPTIONS sourced from constants.js.
@@ -77,7 +78,7 @@ function CreateUserModal({ onClose, onCreated, currentUser }) {
             <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden flex flex-col">
                 <div className="bg-stone-900 px-5 py-4 flex justify-between items-center">
                     <div>
-                        <h2 className="text-lg font-bold text-white">Create New User</h2>
+                        <h2 className="text-lg font-semibold text-white">Create New User</h2>
                         <p className="text-stone-400 text-xs mt-0.5">They'll receive a login via email</p>
                     </div>
                     <button onClick={onClose} className="text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
@@ -219,7 +220,7 @@ export default function UserManagementView({ currentUser }) {
         setActionLoading(email);
         try {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: 'https://watersun9.github.io/CRM/',
+                redirectTo: passwordResetUrl(),
             });
             if (error) throw error;
             showToast('success', `Password reset email sent to ${name}`);
@@ -378,11 +379,11 @@ export default function UserManagementView({ currentUser }) {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-stone-100 bg-stone-50">
-                                <th className="text-left px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">User</th>
-                                <th className="text-left px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">Role</th>
-                                <th className="text-left px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">Status</th>
-                                <th className="text-left px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">Joined</th>
-                                <th className="text-right px-4 py-3 text-[10px] font-bold text-stone-400 uppercase tracking-wider">Actions</th>
+                                <th className="text-left px-4 py-3 text-xs font-semibold text-stone-400 uppercase tracking-wider">User</th>
+                                <th className="text-left px-4 py-3 text-xs font-semibold text-stone-400 uppercase tracking-wider">Role</th>
+                                <th className="text-left px-4 py-3 text-xs font-semibold text-stone-400 uppercase tracking-wider">Status</th>
+                                <th className="text-left px-4 py-3 text-xs font-semibold text-stone-400 uppercase tracking-wider">Joined</th>
+                                <th className="text-right px-4 py-3 text-xs font-semibold text-stone-400 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-50">
@@ -393,7 +394,7 @@ export default function UserManagementView({ currentUser }) {
                                     <tr key={profile.id} className={`transition-colors ${isInactive ? 'bg-stone-50/50 opacity-60' : 'hover:bg-stone-50'}`}>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${isInactive ? 'bg-stone-400' : 'bg-stone-900'}`}>
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 ${isInactive ? 'bg-stone-400' : 'bg-stone-900'}`}>
                                                     {profile.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -411,7 +412,7 @@ export default function UserManagementView({ currentUser }) {
                                                             <button
                                                                 onClick={() => handleUpdateEmail(profile.id, tempEmail.trim())}
                                                                 disabled={actionLoading === profile.id}
-                                                                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                                                className="p-1 text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
                                                                 title="Save Email"
                                                             >
                                                                 <Check className="w-3.5 h-3.5" />
@@ -478,9 +479,9 @@ export default function UserManagementView({ currentUser }) {
                                         </td>
                                         <td className="px-4 py-3">
                                             {isInactive ? (
-                                                <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">Inactive</span>
+                                                <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">Inactive</span>
                                             ) : (
-                                                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">Active</span>
+                                                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">Active</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-xs text-stone-500">
@@ -489,7 +490,7 @@ export default function UserManagementView({ currentUser }) {
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1 justify-end flex-wrap">
                                                 {isYou ? (
-                                                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">You</span>
+                                                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">You</span>
                                                 ) : isInactive ? (
                                                     /* ── Inactive user actions ── */
                                                     <>

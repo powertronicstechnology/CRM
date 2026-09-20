@@ -42,7 +42,7 @@ test('Admin and Staff get both real Excel sheets with customer column order and 
         assert.equal(value(customers, 'QUOTATION AMOUNT'), 0);
         assert.equal(value(customers, 'METER INSTALED'), 'No');
         assert.equal(value(financial, 'TOTAL RECEIVED'), 0);
-        assert.equal(value(financial, 'RECEIVABLES'), -100);
+        assert.equal(value(financial, 'RECEIVABLES'), 0);
         assert.equal(value(financial, 'PAYMENT 1'), 0);
         assert.equal(value(financial, 'PAYMENT NOTES'), JSON.stringify(fixture.payment_notes));
         assert.equal(value(financial, 'RECORD ID'), value(customers, 'RECORD ID'));

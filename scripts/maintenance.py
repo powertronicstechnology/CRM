@@ -7,6 +7,8 @@ import re
 import subprocess
 import sys
 import tarfile
+import shutil
+from readable_backup import create_readable_files
 import tempfile
 import urllib.request
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
@@ -145,6 +147,16 @@ def backup(destination):
             if filename == 'data.sql' and (b'COPY public.admin ' not in content and b'COPY "public"."admin" ' not in content):
                 raise RuntimeError('Data dump is missing the customer table')
             manifest['files'][filename] = {'bytes': len(content), 'sha256': hashlib.sha256(content).hexdigest()}
+        readable = folder / 'readable'
+        manifest['public_table_row_counts'] = create_readable_files(folder / 'data.sql', readable)
+        run(['node', str(Path(__file__).with_name('readable-workbook.mjs')),
+             str(readable / 'customers-source.json'), str(readable / 'POWERTRONICS.xlsx')])
+        if not (readable / 'POWERTRONICS.xlsx').is_file():
+            raise RuntimeError('Readable workbook was not produced')
+        (readable / 'customers-source.json').unlink()
+        for item in readable.iterdir():
+            if item.stat().st_size > 90 * 1024 * 1024:
+                raise RuntimeError('Readable export exceeds repository file budget')
         (folder / 'manifest.json').write_text(json.dumps(manifest, indent=2))
         archive = folder / 'database.tar.gz'
         with tarfile.open(archive, 'w:gz') as tar:
@@ -164,7 +176,9 @@ def backup(destination):
             raise RuntimeError('Backup exceeds repository file budget; move backups to private object storage')
         output.write_bytes(encrypted.read_bytes())
         output.with_suffix(output.suffix + '.sha256').write_text(hashlib.sha256(output.read_bytes()).hexdigest() + '  ' + output.name + '\n')
-        print('Encrypted database backup created; decryption and checksum verified.')
+        readable_target = target / (output.name.removesuffix('.tar.gz.gpg') + '-readable')
+        shutil.copytree(readable, readable_target)
+        print('Encrypted recovery backup and readable Excel/CSV exports created and verified.')
 
 
 if __name__ == '__main__':

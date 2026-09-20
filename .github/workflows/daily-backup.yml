@@ -26,21 +26,27 @@ jobs:
           repository: ${{ secrets.BACKUP_REPO }}
           token: ${{ secrets.BACKUP_PAT }}
           path: backup-repo
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked workbook dependencies
+        run: npm ci --ignore-scripts
       - uses: supabase/setup-cli@v1
         with:
           version: 2.101.0
-      - name: Dump, encrypt and verify database backup
+      - name: Create recovery backup and readable exports
         run: python3 scripts/maintenance.py backup backup-repo
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
-      - name: Save encrypted backup
+      - name: Save recovery backup and readable exports
         working-directory: backup-repo
         run: |
           set -euo pipefail
           git config user.name "backup-bot"
           git config user.email "backup-bot@users.noreply.github.com"
-          git add -- '*.gpg' '*.sha256'
+          git add -- '*.gpg' '*.sha256' '*-readable/*.xlsx' '*-readable/*.csv' '*-readable/*.json' '*-readable/*.txt'
           git diff --cached --quiet && { echo 'No new backup was produced'; exit 1; }
-          git commit -m "Encrypted database backup ${GITHUB_RUN_ID}"
+          git commit -m "Database backup and readable exports ${GITHUB_RUN_ID}"
           git push

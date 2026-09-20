@@ -1,3 +1,4 @@
+import QuotationValue from './QuotationValue.jsx';
 // ─── SubsidyView.jsx ─────────────────────────────────────────────────────────
 // Dedicated Subsidy Dashboard View: Summary metrics, status filter cards,
 // and customer listings grouped by subsidy status (Applied, Claimed, Returned, Received).
@@ -63,38 +64,38 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Total In Subsidy Flow</p>
+                        <p className="text-xs font-semibold text-stone-500 tracking-normal">Total In Subsidy Flow</p>
                         <Banknote size={16} className="text-amber-500" />
                     </div>
-                    <p className="text-2xl font-black text-stone-800">{subsidyCustomers.length}</p>
-                    <p className="text-[11px] text-stone-400 mt-0.5">{totalCapacityKwp.toFixed(2)} kWp combined capacity</p>
+                    <p className="text-2xl font-semibold text-stone-800">{subsidyCustomers.length}</p>
+                    <p className="text-xs text-stone-400 mt-0.5">{totalCapacityKwp.toFixed(2)} kWp combined capacity</p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Claimed / Pending</p>
+                        <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Claimed / Pending</p>
                         <Clock size={16} className="text-amber-500" />
                     </div>
-                    <p className="text-2xl font-black text-amber-700">{claimedCount}</p>
-                    <p className="text-[11px] text-amber-600/80 mt-0.5">Awaiting disbursement</p>
+                    <p className="text-2xl font-semibold text-amber-700">{claimedCount}</p>
+                    <p className="text-xs text-amber-600/80 mt-0.5">Awaiting disbursement</p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Subsidy Received</p>
-                        <CheckCircle2 size={16} className="text-emerald-500" />
+                        <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Subsidy Received</p>
+                        <CheckCircle2 size={16} className="text-emerald-700" />
                     </div>
-                    <p className="text-2xl font-black text-emerald-700">{receivedCount}</p>
-                    <p className="text-[11px] text-emerald-600/80 mt-0.5">Fully disbursed & settled</p>
+                    <p className="text-2xl font-semibold text-emerald-700">{receivedCount}</p>
+                    <p className="text-xs text-emerald-700/80 mt-0.5">Fully disbursed & settled</p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Returned / Queries</p>
+                        <p className="text-xs font-semibold text-rose-600 uppercase tracking-wide">Returned / Queries</p>
                         <AlertCircle size={16} className="text-rose-500" />
                     </div>
-                    <p className="text-2xl font-black text-rose-700">{returnedCount}</p>
-                    <p className="text-[11px] text-rose-600/80 mt-0.5">Needs correction / resubmission</p>
+                    <p className="text-2xl font-semibold text-rose-700">{returnedCount}</p>
+                    <p className="text-xs text-rose-600/80 mt-0.5">Needs correction / resubmission</p>
                 </div>
             </div>
 
@@ -108,8 +109,8 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
                             : 'bg-white border-stone-100 text-stone-800 hover:border-stone-200'
                     }`}
                 >
-                    <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5 opacity-70">All Subsidy</p>
-                    <p className="text-xl font-bold">{subsidyCustomers.length}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-0.5 opacity-70">All Subsidy</p>
+                    <p className="text-xl font-semibold">{subsidyCustomers.length}</p>
                 </button>
 
                 {SUBSIDY_TAGS.map(tag => {
@@ -123,8 +124,8 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
                                 isSelected ? 'ring-2 ring-stone-900 ring-offset-2' : ''
                             } ${tag.bg} ${tag.border}`}
                         >
-                            <p className={`text-[9px] font-bold uppercase tracking-widest mb-0.5 ${tag.text}`}>{tag.label}</p>
-                            <p className={`text-xl font-bold ${tag.text}`}>{count}</p>
+                            <p className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${tag.text}`}>{tag.label}</p>
+                            <p className={`text-xl font-semibold ${tag.text}`}>{count}</p>
                         </button>
                     );
                 })}
@@ -146,8 +147,8 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
                     <div key={tag.id} className="space-y-3">
                         <div className="flex items-center gap-2">
                             <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${tag.dot}`} />
-                            <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider">{tag.label}</h3>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${tag.bg} ${tag.text} ${tag.border}`}>
+                            <h3 className="text-xs font-semibold text-stone-800 uppercase tracking-wider">{tag.label}</h3>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${tag.bg} ${tag.text} ${tag.border}`}>
                                 {group.length}
                             </span>
                         </div>
@@ -155,7 +156,6 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             {group.map(c => {
                                 const status = getCustomerSubsidyStatus(c) || tag.id;
-                                const quotedVal = Number(c.quoted_amount_3 || c.quoted_amount || c.total_cost || 0);
 
                                 return (
                                     <div
@@ -166,14 +166,14 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
                                         <div>
                                             <div className="flex items-start justify-between gap-2 mb-2">
                                                 <div className="min-w-0">
-                                                    <h4 className="text-sm font-bold text-stone-800 group-hover:text-amber-700 transition-colors truncate">
+                                                    <h4 className="text-sm font-semibold text-stone-800 group-hover:text-amber-700 transition-colors truncate">
                                                         {c.customer_name}
                                                     </h4>
-                                                    <p className="text-[10px] text-stone-400 font-mono mt-0.5">
+                                                    <p className="text-xs text-stone-400 font-mono mt-0.5">
                                                         {c.crn || 'NO-CRN'} {c.area ? `· ${c.area}` : ''}
                                                     </p>
                                                 </div>
-                                                <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border flex-shrink-0 ${tag.bg} ${tag.text} ${tag.border}`}>
+                                                <span className={`text-xs px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider border flex-shrink-0 ${tag.bg} ${tag.text} ${tag.border}`}>
                                                     {status}
                                                 </span>
                                             </div>
@@ -181,31 +181,31 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
                                             {/* Details row */}
                                             <div className="grid grid-cols-2 gap-2 my-3 text-xs">
                                                 <div className="bg-stone-50 p-2 rounded-xl border border-stone-100">
-                                                    <p className="text-[9px] text-stone-400 uppercase font-bold">Capacity</p>
-                                                    <p className="font-bold text-stone-700">⚡ {c.system_capacity_kwp || '–'} kWp</p>
+                                                    <p className="text-xs text-stone-400 uppercase font-semibold">Capacity</p>
+                                                    <p className="font-semibold text-stone-700">⚡ {c.system_capacity_kwp || '–'} kWp</p>
                                                 </div>
                                                 <div className="bg-stone-50 p-2 rounded-xl border border-stone-100">
-                                                    <p className="text-[9px] text-stone-400 uppercase font-bold">Quoted</p>
-                                                    <p className="font-bold text-stone-700">{quotedVal ? formatIndianCurrency(quotedVal) : '–'}</p>
+                                                    <p className="text-xs text-stone-400 uppercase font-semibold">Quoted</p>
+                                                    <p className="font-semibold text-stone-700"><QuotationValue record={c} /></p>
                                                 </div>
                                             </div>
 
                                             {/* Dates */}
-                                            <div className="space-y-1 text-[11px] text-stone-500 pt-1 border-t border-stone-50">
+                                            <div className="space-y-1 text-xs text-stone-500 pt-1 border-t border-stone-50">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-semibold text-stone-400">Claim Date:</span>
+                                                    <span className="text-xs font-semibold text-stone-400">Claim Date:</span>
                                                     <span className="font-semibold text-stone-700">{c.subsidy_claim ? formatDate(c.subsidy_claim) : '–'}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-semibold text-stone-400">Received Date:</span>
+                                                    <span className="text-xs font-semibold text-stone-400">Received Date:</span>
                                                     <span className="font-semibold text-emerald-700">{c.subsidy_received ? formatDate(c.subsidy_received) : '–'}</span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-stone-100 text-[10px] text-stone-400 font-semibold">
+                                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-stone-100 text-xs text-stone-400 font-semibold">
                                             <span>{c.project_type || 'General'}</span>
-                                            <span className="flex items-center gap-0.5 text-amber-600 font-bold group-hover:translate-x-0.5 transition-transform">
+                                            <span className="flex items-center gap-0.5 text-amber-600 font-semibold group-hover:translate-x-0.5 transition-transform">
                                                 View Details <ArrowUpRight size={12} />
                                             </span>
                                         </div>

@@ -1,10 +1,14 @@
 import importlib.util
+import sys
+import subprocess
 import json
 import os
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).parents[1] / 'scripts'))
 
 spec = importlib.util.spec_from_file_location('maintenance', Path(__file__).parents[1] / 'scripts/maintenance.py')
 m = importlib.util.module_from_spec(spec)
@@ -53,16 +57,21 @@ class MaintenanceTests(unittest.TestCase):
         if command[0] == 'supabase':
             path = Path(command[command.index('-f')+1])
             path.write_text({'roles.sql':'CREATE ROLE example;', 'schema.sql':'CREATE TABLE public.admin(); CREATE SCHEMA crm_private;', 'data.sql':'COPY public.admin (id) FROM stdin;\n1\n\\.\n'}[path.name])
+        elif command[0] == 'node':
+            subprocess.run(command, check=True, capture_output=True)
         else:
             # This tests orchestration and integrity checks; real GPG runs in GitHub Actions.
             path = Path(command[command.index('--output')+1])
             path.write_bytes(Path(command[-1]).read_bytes())
-    def test_backup_only_publishes_verified_encrypted_archive(self):
+    def test_backup_publishes_verified_archive_and_readable_exports(self):
         env={'SUPABASE_DB_URL':'postgresql://tester:fake-password@test.invalid:5432/postgres','BACKUP_PASSPHRASE':'x'*40}
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, env), patch.object(m, 'run', side_effect=self.fake_run):
             m.backup(folder)
             files=[p for p in Path(folder).rglob('*') if p.is_file()]
-            self.assertEqual(len(files),2)
+            self.assertEqual(len(files),6)
+            self.assertTrue(any(p.name == "POWERTRONICS.xlsx" for p in files))
+            self.assertTrue(any(p.name == "admin.csv" for p in files))
+            self.assertFalse(any(p.name == "customers-source.json" for p in files))
             self.assertTrue(any(p.name.endswith('.gpg') for p in files))
             self.assertFalse(any(p.name.endswith('.sql') for p in files))
     def test_failed_dump_does_not_publish(self):

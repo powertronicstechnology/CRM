@@ -16,23 +16,39 @@
 //   src/components/LoginScreen.jsx
 // ──────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabase';
 import { canEnterPortal } from './access';
 import { Sun } from 'lucide-react';
 import LoginScreen from './components/LoginScreen';
 import Dashboard   from './components/Dashboard';
+import SetPassword from './components/SetPassword';
+import { isPasswordRecovery } from './passwordRecovery.js';
 
 export default function App() {
+    const [recovery, setRecovery] = useState(() => isPasswordRecovery(window.location));
+    const recoveryRef = useRef(recovery);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Subscribe before reading the session so recovery never enters the dashboard.
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+            if (event === 'PASSWORD_RECOVERY') {
+                recoveryRef.current = true;
+                setRecovery(true);
+                setUser(null);
+                setLoading(false);
+            }
+            if (event === 'SIGNED_OUT') setUser(null);
+        });
         // Restore session on page load
         supabase.auth.getSession().then(async ({ data: { session } }) => {
+            if (recoveryRef.current) { setLoading(false); return; }
             if (session?.user) {
                 const { data: profile } = await supabase
                     .from('profiles').select('*').eq('id', session.user.id).single();
+                if (recoveryRef.current) { setLoading(false); return; }
                 if (canEnterPortal(profile)) {
                     setUser({
                         id: session.user.id,
@@ -47,11 +63,6 @@ export default function App() {
                 }
             }
             setLoading(false);
-        });
-
-        // Only respond to sign-out; sign-in is handled by LoginScreen via onLogin
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-            if (event === 'SIGNED_OUT') setUser(null);
         });
 
         return () => subscription.unsubscribe();
@@ -78,6 +89,8 @@ export default function App() {
         const timer = setInterval(refresh, 30000);
         return () => { cancelled = true; clearInterval(timer); window.removeEventListener('focus', refresh); };
     }, [user?.id]);
+
+    if (recovery) return <SetPassword />;
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-stone-900">

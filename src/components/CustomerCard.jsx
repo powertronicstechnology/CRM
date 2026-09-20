@@ -1,3 +1,5 @@
+import { quotationAmount } from '../quotation.js';
+import QuotationValue from './QuotationValue.jsx';
 // ─── CustomerCard.jsx ─────────────────────────────────────────────────────────
 // Card in the stage grid. Shows name, CRN, capacity, location, POC, phone,
 // branch, vendor, docs link, financial tag pill, internal remarks preview,
@@ -5,7 +7,7 @@
 // ──────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useRef } from 'react';
-import { Zap, MapPin, User, Building2, Package, FolderOpen, ChevronDown, Sun, Cpu } from 'lucide-react';
+import { Zap, MapPin, User, Building2, Package, FolderOpen, ChevronDown, Sun, Cpu, Phone, ClipboardList, MessageSquare } from 'lucide-react';
 import { PRIMARY_STAGES, FINANCIAL_TAGS, FINANCIAL_TAG_COLORS } from '../constants';
 import { formatIndianCurrency } from '../utils';
 
@@ -23,49 +25,49 @@ export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFi
     }, [showStageMenu]);
 
     const totalPaid = Number(customer.total_received) || 0;
-    const quotedAmt = Number(customer.quoted_amount || customer.total_cost || 0);
+    const quotedAmt = quotationAmount(customer);
     const balance = quotedAmt - totalPaid;
     const tagColors = customer.financial_tag ? (FINANCIAL_TAG_COLORS[customer.financial_tag] || { bg: 'bg-amber-50/50', text: 'text-stone-700', border: 'border-amber-100', dot: 'bg-amber-400' }) : {};
 
     return (
-        <div className="bg-white rounded-[22px] border border-stone-100 shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-amber-400 group flex flex-col h-[400px] min-w-0">
+        <div className="bg-white rounded-[22px] border border-stone-100 shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-amber-400 group flex flex-col h-[350px] min-w-0">
             {/* Clickable top section */}
-            <div className="px-6 py-5 cursor-pointer flex-1 min-h-0 overflow-hidden" onClick={() => onSelect(customer)}>
-                <div className="flex justify-between items-start gap-3 h-12 mb-3">
-                    <h3 title={customer.customer_name} className="min-w-0 line-clamp-2 break-words text-lg font-extrabold text-stone-800 group-hover:text-amber-600 transition-colors leading-6">
+            <div className="px-5 py-4 cursor-pointer flex-1 min-h-0 overflow-hidden" onClick={() => onSelect(customer)}>
+                <div className="flex justify-between items-start gap-3 h-10 mb-2">
+                    <h3 title={customer.customer_name} className="min-w-0 line-clamp-2 break-words text-base font-semibold text-stone-800 group-hover:text-amber-600 transition-colors leading-5">
                         {customer.customer_name}
                     </h3>
-                    <span className="text-xs bg-stone-100 text-stone-500 px-2.5 py-1 rounded-md font-bold uppercase max-w-[136px] shrink-0 truncate">
+                    <span className="text-xs bg-stone-100 text-stone-500 px-2.5 py-1 rounded-md font-semibold uppercase max-w-[136px] shrink-0 truncate">
                         {customer.crn || 'NO-CRN'}
                     </span>
                 </div>
 
                 {/* Badges for Capacity and Project Type */}
-                <div className="flex items-center gap-2 h-8 mb-3 overflow-hidden">
-                    <span className="shrink-0 inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg text-sm font-bold border border-amber-100">
+                <div className="flex items-center gap-2 h-8 mb-2 overflow-hidden">
+                    <span className="shrink-0 inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg text-sm font-semibold border border-amber-100">
                         <Zap size={14} className="flex-shrink-0 text-amber-500" />
                         {customer.system_capacity_kwp ? `${customer.system_capacity_kwp} kWp` : '–'}
                     </span>
                     {customer.project_type && (
-                        <span className="min-w-0 inline-flex items-center gap-1.5 bg-stone-50 text-stone-600 px-2.5 py-1 rounded-lg text-sm font-bold border border-stone-100 uppercase">
-                            <span>📋</span>
+                        <span className="min-w-0 inline-flex items-center gap-1.5 bg-stone-50 text-stone-600 px-2.5 py-1 rounded-lg text-sm font-semibold border border-stone-100 uppercase">
+                            <ClipboardList size={14} className="shrink-0" />
                             <span className="truncate" title={customer.project_type}>{customer.project_type}</span>
                         </span>
                     )}
                 </div>
 
                 {/* Details side-by-side in a 2-column grid */}
-                <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-stone-600 font-medium h-14 pt-2">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-stone-600 font-medium h-12 pt-1">
                     {(
                         <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-stone-400 text-sm">📞</span>
+                            <Phone size={14} className="text-stone-400 shrink-0" />
                             <span className="truncate">{customer.phone_number || '–'}</span>
                         </div>
                     )}
                     {(
                         <div className="flex items-center gap-1.5 min-w-0">
                             <MapPin size={14} className="text-stone-400 flex-shrink-0" />
-                            <span className="truncate">Area: <strong className="text-stone-800 font-bold">{customer.area || '–'}</strong></span>
+                            <span className="truncate">Area: <strong className="text-stone-800 font-semibold">{customer.area || '–'}</strong></span>
                         </div>
                     )}
                     {(
@@ -96,25 +98,25 @@ export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFi
                 {/* Money bar */}
                 <div className="h-16 grid grid-cols-3 gap-0 px-2 py-2.5">{canSeeFinance && <>
                     <div className="text-center px-2">
-                        <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wide">Quoted</p>
-                        <p className="text-base font-bold text-stone-700 mt-0.5">{formatIndianCurrency(quotedAmt)}</p>
+                        <p className="text-xs font-semibold text-stone-500 tracking-normal">Quoted</p>
+                        <p className="text-base tabular-nums font-semibold text-stone-700 mt-0.5"><QuotationValue record={customer} /></p>
                     </div>
                     <div className="text-center px-2">
-                        <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wide">Received</p>
-                        <p className="text-base font-bold text-emerald-600 mt-0.5">{formatIndianCurrency(totalPaid)}</p>
+                        <p className="text-xs font-semibold text-stone-500 tracking-normal">Received</p>
+                        <p className="text-base tabular-nums font-semibold text-emerald-700 mt-0.5">{formatIndianCurrency(totalPaid, false)}</p>
                     </div>
                     <div className="text-center px-2">
-                        <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wide">Balance</p>
-                        <p className={`text-base font-bold mt-0.5 ${balance > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>
-                            {formatIndianCurrency(balance)}
+                        <p className="text-xs font-semibold text-stone-500 tracking-normal">Balance</p>
+                        <p className={`text-base tabular-nums font-semibold mt-0.5 ${balance > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            {formatIndianCurrency(balance, false)}
                         </p>
                     </div>
                 </>}</div>
 
                 {/* Financial tag pill */}
-                <div className="h-8 px-6 flex items-center min-w-0">
+                <div className="h-6 px-5 flex items-center min-w-0">
                     {canSeeFinance && customer.financial_tag && (
-                        <span title={customer.financial_tag} className={`max-w-full inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-bold uppercase border ${tagColors.bg || 'bg-stone-50'} ${tagColors.text || 'text-stone-500'} ${tagColors.border || 'border-stone-200'}`}>
+                        <span title={customer.financial_tag} className={`max-w-full inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold uppercase border ${tagColors.bg || 'bg-stone-50'} ${tagColors.text || 'text-stone-500'} ${tagColors.border || 'border-stone-200'}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${tagColors.dot || 'bg-stone-400'}`} />
                             <span className="truncate">{customer.financial_tag}</span>
                         </span>
@@ -122,16 +124,16 @@ export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFi
                 </div>
 
                 {/* Internal remarks preview */}
-                <div className="h-8 px-6 flex items-center min-w-0">
+                <div className="h-6 px-5 flex items-center min-w-0">
                     {customer.internal_remarks && (
-                        <p title={customer.internal_remarks} className="text-xs text-stone-500 italic truncate">
-                            💬 {customer.internal_remarks}
+                        <p title={customer.internal_remarks} className="text-sm text-stone-500 truncate">
+                            <MessageSquare size={13} className="inline mr-1 text-stone-400" />{customer.internal_remarks}
                         </p>
                     )}
                 </div>
 
                 {/* Stage move dropdown */}
-                <div className="h-[60px] px-5 pt-1 pb-3">
+                <div className="h-[54px] px-4 pt-1 pb-3">
                     <div className="flex gap-2">
                         <div className="relative flex-1 min-w-0" ref={dropdownRef}>
                             <button onClick={() => setShowStageMenu(!showStageMenu)}
@@ -144,7 +146,7 @@ export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFi
                                     {PRIMARY_STAGES.map(stage => (
                                         <button key={stage.id}
                                             onClick={() => { onMoveStage(customer.id, stage.id); setShowStageMenu(false); }}
-                                            className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-stone-50 transition-colors ${customer.stage === stage.id ? 'bg-amber-50 font-bold text-amber-700' : 'text-stone-600'}`}>
+                                            className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-stone-50 transition-colors ${customer.stage === stage.id ? 'bg-amber-50 font-semibold text-amber-700' : 'text-stone-600'}`}>
                                             <stage.icon className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
                                             {stage.label}
                                         </button>
@@ -162,7 +164,7 @@ export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFi
                                     disabled={!nextStage}
                                     onClick={() => nextStage && onMoveStage(customer.id, nextStage.id)}
                                     title={nextStage ? `Move to next stage: ${nextStage.label}` : 'Already at the final stage'}
-                                    className="px-3 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all font-bold text-sm"
+                                    className="px-3 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all font-semibold text-sm"
                                 >
                                     <span className="leading-none">→</span>
                                 </button>

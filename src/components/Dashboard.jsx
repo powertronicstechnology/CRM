@@ -223,7 +223,7 @@ export default function Dashboard({ user, onLogout }) {
                 <Icon className="w-4 h-4 flex-shrink-0" />
                 <span className="flex-1 text-left truncate">{label}</span>
                 {count > 0 && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold ${isActive ? 'bg-white/20 text-white' : redBadge ? 'bg-red-100 text-red-500' : 'bg-stone-100 text-stone-500'}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-semibold ${isActive ? 'bg-white/20 text-white' : redBadge ? 'bg-red-100 text-red-500' : 'bg-stone-100 text-stone-500'}`}>
                         {count}
                     </span>
                 )}
@@ -255,8 +255,8 @@ export default function Dashboard({ user, onLogout }) {
                             <Sun size={20} />
                         </div>
                         <div>
-                            <h1 className="text-sm font-bold text-stone-800">POWERTRONICS</h1>
-                            <p className="text-[9px] text-stone-400 font-bold uppercase tracking-widest">Portal</p>
+                            <h1 className="text-sm font-semibold text-stone-800">POWERTRONICS</h1>
+                            <p className="text-xs text-stone-400 font-semibold uppercase tracking-wide">Portal</p>
                         </div>
                     </div>
                     <button className="lg:hidden text-stone-400" onClick={() => setSidebarOpen(false)}><X className="w-5 h-5" /></button>
@@ -268,7 +268,7 @@ export default function Dashboard({ user, onLogout }) {
 
                     {/* Financial */}
                     {access.finance && <div className="mt-4 mb-1">
-                        <div className="text-[9px] uppercase font-bold text-stone-300 px-3 pb-2 tracking-widest">Financial</div>
+                        <div className="text-xs uppercase font-semibold text-stone-300 px-3 pb-2 tracking-wide">Financial</div>
                         
                         {/* General Tab */}
                         <button onClick={() => { setCurrentView('financial'); setFinancialProjectType('General'); setSidebarOpen(false); }}
@@ -276,7 +276,7 @@ export default function Dashboard({ user, onLogout }) {
                             <IndianRupee className="w-4 h-4 flex-shrink-0" />
                             <span className="flex-1 text-left">General</span>
                             {generalFinCount > 0 && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold ${currentView === 'financial' && financialProjectType === 'General' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'}`}>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-semibold ${currentView === 'financial' && financialProjectType === 'General' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'}`}>
                                     {generalFinCount}
                                 </span>
                             )}
@@ -288,7 +288,7 @@ export default function Dashboard({ user, onLogout }) {
                             <IndianRupee className="w-4 h-4 flex-shrink-0" />
                             <span className="flex-1 text-left">PM SURYA</span>
                             {pmSuryaFinCount > 0 && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold ${currentView === 'financial' && financialProjectType === 'PM SURYA' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'}`}>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-semibold ${currentView === 'financial' && financialProjectType === 'PM SURYA' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'}`}>
                                     {pmSuryaFinCount}
                                 </span>
                             )}
@@ -300,7 +300,7 @@ export default function Dashboard({ user, onLogout }) {
                             <Banknote className="w-4 h-4 flex-shrink-0" />
                             <span className="flex-1 text-left">Subsidy</span>
                             {subsidyCount > 0 && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold ${currentView === 'subsidy' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-semibold ${currentView === 'subsidy' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
                                     {subsidyCount}
                                 </span>
                             )}
@@ -309,7 +309,7 @@ export default function Dashboard({ user, onLogout }) {
 
                     {/* Project Stages */}
                     {access.crm && <>
-                    <div className="text-[9px] uppercase font-bold text-stone-300 px-3 pt-4 pb-2 tracking-widest">Project Stages</div>
+                    <div className="text-xs uppercase font-semibold text-stone-300 px-3 pt-4 pb-2 tracking-wide">Project Stages</div>
                     {PRIMARY_STAGES.map(s => (
                         <NavBtn key={s.id} view="stages" stage={s.id} icon={s.icon} label={s.label} count={stageCounts[s.id] || 0} />
                     ))}
@@ -317,7 +317,7 @@ export default function Dashboard({ user, onLogout }) {
                     </>}
                     {access.admin && <>
                     {/* System */}
-                    <div className="text-[9px] uppercase font-bold text-stone-300 px-3 pt-5 pb-2 tracking-widest">System</div>
+                    <div className="text-xs uppercase font-semibold text-stone-300 px-3 pt-5 pb-2 tracking-wide">System</div>
                     <NavBtn view="activity" icon={Activity}  label="Activity Log"      count={0} />
                     {user.userType === 'admin' && (
                         <NavBtn view="users" icon={UserCog} label="User Management" count={0} />
@@ -329,12 +329,12 @@ export default function Dashboard({ user, onLogout }) {
                 {/* User + Logout */}
                 <div className="p-3 border-t border-stone-100">
                     <div className="flex items-center gap-3 px-3 py-2 mb-1">
-                        <div className="w-8 h-8 bg-stone-900 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        <div className="w-8 h-8 bg-stone-900 rounded-full flex items-center justify-center text-white text-xs font-semibold">
                             {user.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'A'}
                         </div>
                         <div className="min-w-0">
                             <p className="text-xs font-semibold text-stone-700 truncate">{user.name}</p>
-                            <p className="text-[9px] text-stone-400">{user.role}</p>
+                            <p className="text-xs text-stone-400">{user.role}</p>
                         </div>
                     </div>
                     <button onClick={onLogout}
@@ -350,9 +350,9 @@ export default function Dashboard({ user, onLogout }) {
                 <header className="h-16 bg-white/90 backdrop-blur-md border-b border-stone-100 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-stone-500"><Menu className="w-6 h-6" /></button>
-                        <h2 className="font-bold text-stone-800">{headerTitle}</h2>
+                        <h2 className="font-semibold text-stone-800">{headerTitle}</h2>
                         {currentView === 'financial' && (financialProjectType === 'General' ? generalFinCount : pmSuryaFinCount) > 0 && (
-                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
                                 {financialProjectType === 'General' ? generalFinCount : pmSuryaFinCount} tagged
                             </span>
                         )}
@@ -361,6 +361,7 @@ export default function Dashboard({ user, onLogout }) {
                     <div className="flex items-center gap-2">
                         {/* Month Selector directly in main header */}
                         <select
+                            aria-label="Filter by month"
                             value={selectedMonth}
                             onChange={e => setSelectedMonth(e.target.value)}
                             className="bg-stone-100 hover:bg-stone-200/80 text-stone-700 text-xs font-semibold px-3 py-2 rounded-xl border border-transparent focus:outline-none focus:ring-2 focus:ring-amber-300 transition-all cursor-pointer"
@@ -370,6 +371,17 @@ export default function Dashboard({ user, onLogout }) {
                                 <option key={idx} value={idx}>{m}</option>
                             ))}
                         </select>
+                        {selectedMonth !== 'All' && (
+                            <button
+                                type="button"
+                                onClick={() => setSelectedMonth('All')}
+                                aria-label="Clear month filter"
+                                className="shrink-0 px-3 py-2 rounded-xl border border-stone-200 text-sm font-semibold text-stone-600 hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                            >
+                                Clear
+                            </button>
+                        )}
+
 
                         {/* ── Global search (always visible) ── */}
                         <div className="relative" ref={globalSearchRef}>
@@ -390,9 +402,9 @@ export default function Dashboard({ user, onLogout }) {
                                             className="w-full px-4 py-2.5 text-left hover:bg-amber-50 transition-colors group">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-sm font-semibold text-stone-800 group-hover:text-amber-700">{c.customer_name}</p>
-                                                <span className="text-[9px] bg-stone-100 text-stone-400 px-1.5 py-0.5 rounded font-bold uppercase ml-2">{c.crn || '–'}</span>
+                                                <span className="text-xs bg-stone-100 text-stone-400 px-1.5 py-0.5 rounded font-semibold uppercase ml-2">{c.crn || '–'}</span>
                                             </div>
-                                            <p className="text-[10px] text-stone-400 mt-0.5">
+                                            <p className="text-xs text-stone-400 mt-0.5">
                                                 {PRIMARY_STAGES.find(s => s.id === c.stage)?.label || c.stage} · {c.phone_number || 'No phone'}
                                             </p>
                                         </button>

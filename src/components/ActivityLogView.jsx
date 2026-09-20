@@ -1,23 +1,15 @@
+import ActivityHistory from './ActivityHistory.jsx';
 // ─── ActivityLogView.jsx ──────────────────────────────────────────────────────
 // Full-page activity log with real-time Supabase subscription.
 // ──────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { Activity } from 'lucide-react';
-import { formatLogDate } from '../utils';
-
-const ACTION_COLORS = {
-    create:       'bg-green-100 text-green-700',
-    update:       'bg-blue-100 text-blue-700',
-    delete:       'bg-red-100 text-red-700',
-    stage_change: 'bg-amber-100 text-amber-700',
-    note:         'bg-yellow-100 text-yellow-700',
-};
 
 export default function ActivityLogView() {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -26,7 +18,8 @@ export default function ActivityLogView() {
                 .select('*, profiles(name)')
                 .order('created_at', { ascending: false })
                 .limit(200);
-            if (!error) setLogs(data || []);
+            if (!error) { setLogs(data || []); setErrorMessage(''); }
+            else setErrorMessage('Could not load activity. Refresh to try again.');
             setLoading(false);
         };
         fetchLogs();
@@ -42,27 +35,7 @@ export default function ActivityLogView() {
         </div>
     );
 
-    return (
-        <div className="max-w-3xl mx-auto space-y-3">
-            {logs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-stone-400">
-                    <Activity className="w-12 h-12 mb-3 text-stone-300" />
-                    <p className="font-medium text-stone-500">No activity logged yet</p>
-                </div>
-            ) : logs.map(log => (
-                <div key={log.id} className="bg-white rounded-xl p-4 border border-stone-100 shadow-sm flex items-start gap-3">
-                    <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase flex-shrink-0 ${ACTION_COLORS[log.action] || 'bg-stone-100 text-stone-700'}`}>
-                        {log.action}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm text-stone-800">{log.message}</p>
-                        {log.new_value && <p className="text-xs text-stone-500 mt-0.5">{log.new_value}</p>}
-                        <p className="text-[10px] text-stone-400 mt-1 font-bold uppercase">
-                            {log.profiles?.name || 'Unknown'} • {formatLogDate(log.created_at)}
-                        </p>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
+    return <div className="max-w-5xl mx-auto">
+        {errorMessage ? <p role="alert" className="text-sm text-red-700">{errorMessage}</p> : <ActivityHistory logs={logs} limit={200} />}
+    </div>;
 }

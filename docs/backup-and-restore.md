@@ -22,7 +22,7 @@ Do not send these values in chat or commit them. The existing backup job may alr
 - Supabase Keep Alive: 08:30 IST daily. An authorized metadata query returns at most one identifier, which is never printed. This checks database reachability and creates activity; it is not a guarantee against free-tier suspension or an uptime SLA. A paused project must be restored by its owner.
 - Daily Supabase Backup: 01:30 IST daily. Verifies private destination and write access; uses pinned Supabase CLI 2.101.0 to dump roles, application schema and data (including supported Auth/Storage data); archives with a manifest/checksums; encrypts with GPG AES256; decrypts locally to verify byte integrity; only then commits encrypted files and a ciphertext checksum.
 - Dump failures, missing expected CRM content, failed encryption, oversized archives (>90 MiB), and failed pushes fail the job. No CSV API row limits or pagination are involved.
-- Plaintext temporary files are removed when the script exits. Only encrypted .gpg and .sha256 files go to the backup repository. Retention is currently all successful snapshots; watch repository growth and move to private object storage before approaching limits.
+- Plaintext temporary files are removed when the script exits. Encrypted .gpg and .sha256 files plus a dated -readable directory go to the private backup repository. The readable directory contains unencrypted Excel and public-table CSV exports, as requested by the owner. Retention is currently all successful snapshots; watch repository growth and move to private object storage before approaching limits.
 - Three sequential CLI dumps are not one cross-file transactional snapshot; schedule during quiet periods and avoid schema migrations during the backup window.
 - The backup does not include Storage file bytes, project configuration/secrets, or Edge Function deployments. Custom auth/storage schema changes need separate migrations. Vector bucket/index tables are excluded per the current Supabase restore guide. Preserve the CRM source repository (including crm_private migrations and add_user source) alongside backups. Vault/encrypted-column recovery requires the additional steps in the official guide.
 
@@ -65,3 +65,14 @@ Reference: https://supabase.com/docs/guides/platform/migrating-within-supabase/b
 ## Verification performed here
 
 Local unit tests cover private-repository checks, authorized health request behavior, failed dump handling, encryption-integrity failure handling and publication of ciphertext only. Subprocesses are mocked in these tests; they are not a real Supabase dump, cryptographic test or database restore. Production build and CRM access/export tests are also run. Live workflow success and restore capability remain unverified until the owner completes the steps above.
+
+## Readable downloads for the client
+
+Each successful run now also writes `YYYY/MM/DD/<timestamp>-<run>-<attempt>-readable/`:
+- `POWERTRONICS.xlsx`: Customers and Financial tabs, matching the CRM export, with active customers only.
+- One CSV per dumped public application table (for example `admin.csv`, `profiles.csv`, `activity_log.csv`), including soft-deleted records. Auth credentials and internal schemas are excluded.
+- `row-counts.json` and `README.txt` describe scope and counts.
+
+Download the Excel workbook for client handover. Download specific CSVs for importing into another system; map its required columns and import identifiers as text. CSV cannot distinguish null from empty text; use the encrypted SQL archive for exact restoration. Do not hand over every internal application table indiscriminately.
+
+No passphrase is needed for readable files. These are private-repository downloads, not public CRM assets. The encrypted dump remains available for database recovery. Deploy the updated workflow and scripts before running a new backup; old snapshots do not acquire readable files automatically. The existing database connection-string error must still be resolved.

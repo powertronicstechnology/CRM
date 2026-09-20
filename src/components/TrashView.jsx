@@ -1,3 +1,4 @@
+import { quotationAmount, hasQuotation } from '../quotation.js';
 // ─── TrashView.jsx ────────────────────────────────────────────────────────────
 // Shows soft-deleted customers (deleted_at IS NOT NULL).
 // Actions: View details (read-only) | Recover.
@@ -27,9 +28,9 @@ function TrashDetailDrawer({ customer, onClose }) {
                     <div>
                         <div className="flex items-center gap-2">
                             <Trash2 size={14} className="text-red-400" />
-                            <h2 className="text-lg font-bold text-white">{customer.customer_name}</h2>
+                            <h2 className="text-lg font-semibold text-white">{customer.customer_name}</h2>
                         </div>
-                        <p className="text-[10px] text-stone-400 mt-1">Deleted {formatDate(customer.deleted_at)} · Read only</p>
+                        <p className="text-xs text-stone-400 mt-1">Deleted {formatDate(customer.deleted_at)} · Read only</p>
                     </div>
                     <button onClick={onClose} className="text-white/40 hover:text-white"><X size={22} /></button>
                 </div>
@@ -44,17 +45,19 @@ function TrashDetailDrawer({ customer, onClose }) {
                         ['Capacity',         customer.system_capacity_kwp ? `${customer.system_capacity_kwp} kWp` : null],
                         ['Project Type',     customer.project_type],
                         ['Stage at Deletion',PRIMARY_STAGES.find(s => s.id === customer.stage)?.label || customer.stage],
-                        ['Quoted Amount',    customer.quoted_amount ? `₹${Number(customer.quoted_amount).toLocaleString('en-IN')}` : null],
+                        ['Quotation used', `₹${quotationAmount(customer).toLocaleString('en-IN')}`],
+                        ['Original quotation', hasQuotation(customer.quoted_amount) ? `₹${Number(customer.quoted_amount).toLocaleString('en-IN')}` : null],
+                        ['Finance quotation', hasQuotation(customer.quoted_amount_3) ? `₹${Number(customer.quoted_amount_3).toLocaleString('en-IN')}` : null],
                         ['Total Received',   customer.total_received ? `₹${Number(customer.total_received).toLocaleString('en-IN')}` : null],
                     ].map(([label, val]) => val ? (
                         <div key={label} className="flex justify-between text-sm gap-4">
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wide mt-0.5">{label}</span>
+                            <span className="text-xs font-semibold text-stone-400 uppercase tracking-wide mt-0.5">{label}</span>
                             <span className="text-stone-700 font-medium text-right break-words max-w-[70%]">{val}</span>
                         </div>
                     ) : null)}
                     {customer.financial_tag && (
                         <div className="pt-2 border-t border-stone-100">
-                            <span className={`inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase border ${tagColors.bg || 'bg-stone-50'} ${tagColors.text || 'text-stone-500'} ${tagColors.border || 'border-stone-200'}`}>
+                            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold uppercase border ${tagColors.bg || 'bg-stone-50'} ${tagColors.text || 'text-stone-500'} ${tagColors.border || 'border-stone-200'}`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${tagColors.dot || 'bg-stone-400'}`} />
                                 {customer.financial_tag}
                             </span>
@@ -83,16 +86,16 @@ export default function TrashView({ trashedCustomers, onRecover, onHardDelete, i
             <div className="flex items-center gap-2 mb-4">
                 <Trash2 className="w-4 h-4 text-stone-400" />
                 <p className="text-sm text-stone-500">{trashedCustomers.length} deleted record{trashedCustomers.length !== 1 ? 's' : ''}</p>
-                {isAdmin && <span className="ml-auto text-[10px] text-stone-400">Admins can permanently delete</span>}
+                {isAdmin && <span className="ml-auto text-xs text-stone-400">Admins can permanently delete</span>}
             </div>
 
             {trashedCustomers.map(c => (
                 <div key={c.id} className="bg-white rounded-2xl border border-stone-100 shadow-sm p-4 flex items-center gap-4 hover:border-red-100 transition-all">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                            <p className="font-bold text-stone-600">{c.customer_name}</p>
-                            <span className="text-[9px] bg-stone-100 text-stone-400 px-2 py-0.5 rounded font-bold uppercase">{c.crn || 'NO-CRN'}</span>
-                            <span className="text-[9px] bg-red-50 text-red-400 px-2 py-0.5 rounded font-bold uppercase">Deleted</span>
+                            <p className="font-semibold text-stone-600">{c.customer_name}</p>
+                            <span className="text-xs bg-stone-100 text-stone-400 px-2 py-0.5 rounded font-semibold uppercase">{c.crn || 'NO-CRN'}</span>
+                            <span className="text-xs bg-red-50 text-red-400 px-2 py-0.5 rounded font-semibold uppercase">Deleted</span>
                         </div>
                         <p className="text-xs text-stone-400">
                             {PRIMARY_STAGES.find(s => s.id === c.stage)?.label || c.stage || '–'} ·{' '}
@@ -105,7 +108,7 @@ export default function TrashView({ trashedCustomers, onRecover, onHardDelete, i
                             <Eye className="w-4 h-4" />
                         </button>
                         <button onClick={() => onRecover(c.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
                             <RotateCcw className="w-3.5 h-3.5" /> Recover
                         </button>
                         {isAdmin && (
@@ -127,7 +130,7 @@ export default function TrashView({ trashedCustomers, onRecover, onHardDelete, i
                     <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-2 bg-red-100 rounded-full"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
-                            <h3 className="font-bold text-stone-800">Permanently Delete?</h3>
+                            <h3 className="font-semibold text-stone-800">Permanently Delete?</h3>
                         </div>
                         <p className="text-sm text-stone-600 mb-5">
                             <strong>{confirmHard.customer_name}</strong> will be <strong>permanently removed</strong> from the database. This cannot be undone.
