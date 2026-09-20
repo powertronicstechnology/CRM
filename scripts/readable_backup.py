@@ -74,7 +74,7 @@ def create_readable_files(dump, destination):
     (destination / 'row-counts.json').write_text(json.dumps(counts, indent=2), encoding='utf-8')
     (destination / 'README.txt').write_text(
         'Readable application data from the same database dump as the encrypted recovery archive.\n'
-        'POWERTRONICS.xlsx: active customers, Customers and Financial tabs matching the CRM export.\n'
+        'POWERTRONICS_YYYY-MM-DD.xlsx (India date): active customers, Customers and Financial tabs matching the CRM export.\n'
         'CSV files: all dumped public application tables, including soft-deleted records.\n'
         'Auth credentials and private/internal schemas are excluded from readable files.\n'
         'CSV values are stored as text; blank cells represent SQL NULL or empty text.\n'

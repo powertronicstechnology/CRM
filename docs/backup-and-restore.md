@@ -69,7 +69,7 @@ Local unit tests cover private-repository checks, authorized health request beha
 ## Readable downloads for the client
 
 Each successful run now also writes `YYYY/MM/DD/<timestamp>-<run>-<attempt>-readable/`:
-- `POWERTRONICS.xlsx`: Customers and Financial tabs, matching the CRM export, with active customers only.
+- `POWERTRONICS_YYYY-MM-DD.xlsx` (backup date in India): Customers and Financial tabs, matching the CRM export, with active customers only.
 - One CSV per dumped public application table (for example `admin.csv`, `profiles.csv`, `activity_log.csv`), including soft-deleted records. Auth credentials and internal schemas are excluded.
 - `row-counts.json` and `README.txt` describe scope and counts.
 

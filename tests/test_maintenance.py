@@ -69,7 +69,7 @@ class MaintenanceTests(unittest.TestCase):
             m.backup(folder)
             files=[p for p in Path(folder).rglob('*') if p.is_file()]
             self.assertEqual(len(files),6)
-            self.assertTrue(any(p.name == "POWERTRONICS.xlsx" for p in files))
+            self.assertTrue(any(p.name.startswith("POWERTRONICS_") and p.suffix == ".xlsx" for p in files))
             self.assertTrue(any(p.name == "admin.csv" for p in files))
             self.assertFalse(any(p.name == "customers-source.json" for p in files))
             self.assertTrue(any(p.name.endswith('.gpg') for p in files))

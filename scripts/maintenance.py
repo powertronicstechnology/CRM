@@ -12,7 +12,7 @@ from readable_backup import create_readable_files
 import tempfile
 import urllib.request
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 def required(name):
@@ -148,10 +148,12 @@ def backup(destination):
                 raise RuntimeError('Data dump is missing the customer table')
             manifest['files'][filename] = {'bytes': len(content), 'sha256': hashlib.sha256(content).hexdigest()}
         readable = folder / 'readable'
+        backup_date = datetime.strptime(timestamp, '%Y%m%dT%H%M%SZ').replace(tzinfo=timezone.utc).astimezone(timezone(timedelta(hours=5, minutes=30))).strftime('%Y-%m-%d')
+        workbook_name = f'POWERTRONICS_{backup_date}.xlsx'
         manifest['public_table_row_counts'] = create_readable_files(folder / 'data.sql', readable)
         run(['node', str(Path(__file__).with_name('readable-workbook.mjs')),
-             str(readable / 'customers-source.json'), str(readable / 'POWERTRONICS.xlsx')])
-        if not (readable / 'POWERTRONICS.xlsx').is_file():
+             str(readable / 'customers-source.json'), str(readable / workbook_name)])
+        if not (readable / workbook_name).is_file():
             raise RuntimeError('Readable workbook was not produced')
         (readable / 'customers-source.json').unlink()
         for item in readable.iterdir():
