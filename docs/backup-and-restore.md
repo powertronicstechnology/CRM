@@ -12,8 +12,8 @@ In powertronicstechnology/CRM → Settings → Secrets and variables → Actions
 | BACKUP_REPO | owner/repository of the existing **private** backup repository |
 | BACKUP_PAT | Token with repository read/write contents and metadata access to that backup repository only |
 | BACKUP_PASSPHRASE | Long random single-line passphrase, at least 32 characters; keep an independent copy in a password manager |
-| VITE_SUPABASE_URL | Public project URL for the frontend |
-| VITE_SUPABASE_ANON_KEY | Public anon key for the frontend; never a service-role key |
+| VITE_SUPABASE_URL | Public project URL for the frontend (falls back to SUPABASE_URL) |
+| VITE_SUPABASE_ANON_KEY | Public anon key for the frontend (falls back to SUPABASE_ANON_KEY); never a service-role key |
 
 Do not send these values in chat or commit them. The existing backup job may already have some secrets; two additions are SUPABASE_DB_URL and BACKUP_PASSPHRASE. The backup repository must have an initialized default branch. Keep old CSV backups private; this change does not delete historical copies.
 

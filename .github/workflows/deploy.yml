@@ -29,8 +29,8 @@ jobs:
           test -n "$VITE_SUPABASE_ANON_KEY" || { echo 'Missing VITE_SUPABASE_ANON_KEY'; exit 1; }
           npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
