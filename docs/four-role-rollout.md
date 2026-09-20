@@ -1,3 +1,5 @@
+> Superseded for the current rollout by [two-role-rollout.md](two-role-rollout.md). Accounts/Manager are paused; Staff now includes finance after the new SQL is applied.
+
 # Four-role rollout
 
 Status: implemented and tested locally. No hosted database, function or website changes have been made by Codex. The user applies all Supabase changes.

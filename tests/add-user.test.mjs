@@ -49,14 +49,14 @@ test('all management actions require a verified active Admin', async () => {
 
 test('removed account types cannot be created, and arbitrary labels are not trusted', async () => {
     const app = setup({ user_type: 'admin', status: 'active' });
-    for (const user_type of ['agent', 'dealer', 'channel_partner', 'vendor', 'sales', 'office', '__proto__', 'constructor']) {
+    for (const user_type of ['accounts', 'manager', 'agent', 'dealer', 'channel_partner', 'vendor', 'sales', 'office', '__proto__', 'constructor']) {
         assert.equal((await app.request({ action: 'create', user_type })).status, 400);
     }
     assert.equal(app.writes.length, 0);
     assert.equal((await app.request({ action: 'create', user_type: 'staff', role: 'Channel Partners', name: 'Test', email: 'test@example.test', password: 'test-only-password' })).status, 200);
     assert.equal(app.writes[1].role, 'Staff');
     assert.equal(app.writes[1].status, 'active');
-    for (const [user_type, role] of [['accounts','Accounts'],['manager','Manager'],['admin','Admin']]) {
+    for (const [user_type, role] of [['admin','Admin']]) {
         const created = setup({ user_type: 'admin', status: 'active' });
         assert.equal((await created.request({ action:'create', user_type, role:'untrusted', name:'Test', email:'test@example.test', password:'test-only-password' })).status,200);
         assert.equal(created.writes[1].role,role);

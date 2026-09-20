@@ -16,7 +16,7 @@ test('navigation and customer detail tabs match each role', async () => {
             define: { 'import.meta.env.VITE_SUPABASE_URL': '"https://example.test"', 'import.meta.env.VITE_SUPABASE_ANON_KEY': '"test-only"' },
         });
         const { Dashboard, Detail, Overview } = await import(outfile);
-        for (const role of ['staff','accounts','manager','admin']) {
+        for (const role of ['staff','admin']) {
             const user = { id:'test', userType:role, name:'Test', role };
             const access = permissionsFor(role);
             const nav = renderToStaticMarkup(createElement(Dashboard,{user,onLogout:()=>{}}));

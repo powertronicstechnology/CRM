@@ -1,27 +1,37 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
     branches: [main]
-
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout 
-        uses: actions/checkout@v4
-
-      - name: Install and Build 
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Test access rules, exports and maintenance
         run: |
-          npm install
+          node --test tests/*.test.mjs
+          python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Verify build configuration and build
+        run: |
+          test -n "$VITE_SUPABASE_URL" || { echo 'Missing VITE_SUPABASE_URL'; exit 1; }
+          test -n "$VITE_SUPABASE_ANON_KEY" || { echo 'Missing VITE_SUPABASE_ANON_KEY'; exit 1; }
           npm run build
         env:
-          # This passes your Supabase keys to the build process
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-
-      - name: Deploy 
-        uses: JamesIves/github-pages-deploy-action@v4
+      - uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist # Vite builds into the 'dist' folder
-          branch: gh-pages # This is the hidden branch where the live code lives
+          folder: dist
+          branch: gh-pages

@@ -159,7 +159,8 @@ serve(async (req) => {
         if (action === "create") {
             const { name, email, password, user_type } = body
             const roleLabels: Record<string, string> = {
-                staff: "Staff", accounts: "Accounts", manager: "Manager", admin: "Admin"
+                staff: "Staff", admin: "Admin"
+                // Paused: accounts: "Accounts", manager: "Manager"
             }
             if (typeof user_type !== "string" || !Object.hasOwn(roleLabels, user_type)) {
                 return new Response(JSON.stringify({ error: "Unsupported account type" }), {

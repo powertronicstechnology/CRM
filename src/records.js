@@ -3,9 +3,8 @@ import fields from './recordFields.json';
 
 // SQL independently checks all permissions; this only shapes UI payloads.
 export function editablePatch(userType, input, original = null) {
-    const allowed = userType === 'staff' ? fields.staffWrite
-        : userType === 'accounts' ? fields.accountsWrite
-        : ['admin', 'manager'].includes(userType) ? fields.allWrite : [];
+    // Accounts/Manager field sets remain in recordFields.json for a future rollout.
+    const allowed = ['admin', 'staff'].includes(userType) ? fields.allWrite : [];
     return Object.fromEntries(Object.entries(input).filter(([key, value]) =>
         allowed.includes(key) && value !== undefined
         && (!original || JSON.stringify(original[key]) !== JSON.stringify(value))));

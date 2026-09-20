@@ -26,8 +26,8 @@ async function roundTrip(role, records = [fixture, { ...fixture, id: 'deleted', 
     return read;
 }
 
-test('Admin and Manager get both real Excel sheets with customer column order and faithful values', async () => {
-    for (const role of ['admin', 'manager']) {
+test('Admin and Staff get both real Excel sheets with customer column order and faithful values', async () => {
+    for (const role of ['admin', 'staff']) {
         const workbook = await roundTrip(role);
         assert.deepEqual(workbook.worksheets.map(s => s.name), ['Customers', 'Financial']);
         const [customers, financial] = workbook.worksheets;
@@ -52,19 +52,10 @@ test('Admin and Manager get both real Excel sheets with customer column order an
     }
 });
 
-test('Role exports obey the database read allowlists even when given a full record', async () => {
-    const fields = JSON.parse(await readFile(new URL('../src/recordFields.json', import.meta.url)));
-    const full = Object.fromEntries([...fields.shared, ...fields.crm, ...fields.finance].map(key => [key, `marker:${key}`]));
-    for (const [role, sheetName, allowed] of [['staff', 'Customers', fields.staffRead], ['accounts', 'Financial', fields.accountsRead]]) {
-        const workbook = await roundTrip(role, [full]);
-        assert.deepEqual(workbook.worksheets.map(s => s.name), [sheetName]);
-        const serialized = JSON.stringify(workbook.model);
-        for (const field of Object.keys(full).filter(f => !allowed.includes(f))) {
-            assert.ok(!serialized.includes(`marker:${field}"`), `${role} must not export ${field}`);
-        }
+test('Paused roles cannot export even when supplied full records', async () => {
+    for (const role of ['accounts', 'manager', 'agent', undefined]) {
+        await assert.rejects(buildExportWorkbook([fixture], role), /cannot export/);
     }
-    await assert.rejects(buildExportWorkbook([fixture], 'agent'), /cannot export/);
-    await assert.rejects(buildExportWorkbook([fixture], undefined), /cannot export/);
 });
 
 test('Empty selections still produce two usable header-only tabs', async () => {
@@ -87,7 +78,7 @@ test('Sheet selections match the preview and reject unauthorized exports', async
             assert.deepEqual(loaded.getWorksheet(sheet.name).getRow(2).values.slice(1), sheet.rows[0]);
         }
     }
-    assert.throws(() => exportSheets([fixture], 'staff', 'finance'), /cannot export/);
+    assert.equal(exportSheets([fixture], 'staff', 'finance')[0].name, 'Financial');
     assert.throws(() => exportSheets([fixture], 'accounts', 'customers'), /cannot export/);
     assert.throws(() => exportSheets([fixture], 'admin', 'invalid'), /Unknown/);
 });
