@@ -1,3 +1,4 @@
+import { savedStageNote, saveStageNotePatch, stageTransitionPatch } from '../stageRemarks.js';
 import ActivityHistory from './ActivityHistory.jsx';
 import { receivableAmount } from '../quotation.js';
 import UnsavedChanges, { useUnsavedChanges } from './UnsavedChanges';
@@ -602,7 +603,13 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
         setDirtyFields(previous => Object.fromEntries(Object.entries(previous).filter(([key]) => !(key in patch))));
     };
     const [followUpText, setFollowUpText] = useState('');
-    const [commentText, setCommentText] = useState('');
+    const [commentText, setCommentText] = useState(() => savedStageNote(customer)?.text || '');
+    const [savedCommentText, setSavedCommentText] = useState(() => savedStageNote(customer)?.text || '');
+    const [savingComment, setSavingComment] = useState(false);
+    const [savingStage, setSavingStage] = useState(false);
+    const commentSavingRef = useRef(false);
+    const stageSavingRef = useRef(false);
+    const commentDirty = commentText.trim() !== savedCommentText;
     const [saveError, setSaveError] = useState('');
     const [saving, setSaving] = useState(false);
     const [savingPayments, setSavingPayments] = useState(false);
@@ -644,6 +651,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
 
     useEffect(() => {
         const initialPayments = getInitialPayments(customer);
+        setCommentText(savedStageNote(customer)?.text || '');
+        setSavedCommentText(savedStageNote(customer)?.text || '');
         setEditData({
             ...customer,
             payments: initialPayments
@@ -791,18 +800,31 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
     };
 
     const handleAddComment = async () => {
-        const text = commentText.trim();
-        if (!text) return;
-        const timestamp = new Date().toISOString();
-        const line = `[${formatLogDate(timestamp)}] ${user.name} (${editData.stage || 'no stage'}): ${text}`;
-        const updatedInternalRemarks = editData.internal_remarks ? `${editData.internal_remarks}\n${line}` : line;
-        const updatedStageRemarks = [...(editData.stages_remarks || []), { text, author: user.name, date: timestamp, stage: editData.stage || null }];
+        if (!commentDirty || commentSavingRef.current) return;
+        commentSavingRef.current = true; setSavingComment(true); setSaveError('');
+        try {
+            const patch = saveStageNotePatch(baseline.current, commentText, user);
+            await onUpdate(customer.id, patch);
+            setEditData(prev => ({ ...prev, ...patch }));
+            setCommentText(commentText.trim()); setSavedCommentText(commentText.trim());
+        } catch (error) { setSaveError(error.message || 'Unable to save note'); }
+        finally { commentSavingRef.current = false; setSavingComment(false); }
+    };
 
-        await onUpdate(customer.id, { internal_remarks: updatedInternalRemarks, stages_remarks: updatedStageRemarks });
-        await logActivity(user.id, 'note', `Comment Added: ${text}`, customer.id);
-        setEditData(prev => ({ ...prev, internal_remarks: updatedInternalRemarks, stages_remarks: updatedStageRemarks }));
-        setCommentText('');
-        fetchLogs();
+    const handleStageChange = async (newStage) => {
+        if (stageSavingRef.current || newStage === editData.stage) return;
+        stageSavingRef.current = true; setSavingStage(true); setSaveError('');
+        const oldStage = editData.stage;
+        const patch = stageTransitionPatch(baseline.current, newStage, PRIMARY_STAGES.find(s => s.id === newStage)?.label || newStage);
+        try {
+            await onUpdate(customer.id, patch);
+            setEditData(prev => ({ ...prev, ...patch }));
+            if (!commentDirty) setCommentText('');
+            setSavedCommentText('');
+            await logActivity(user.id, 'stage_change', `STAGE: ${oldStage} → ${newStage}`, customer.id);
+            fetchLogs();
+        } catch (error) { setSaveError(error.message || 'Unable to change stage'); }
+        finally { stageSavingRef.current = false; setSavingStage(false); }
     };
 
     const handleSubsidyStatusClick = (status) => {
@@ -884,7 +906,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
 
     const discardDrafts = () => {
         setEditData({ ...customer, ...baseline.current, payments: getInitialPayments({ ...customer, ...baseline.current }) });
-        setDirtyFields({}); setCommentText(''); setFollowUpText('');
+        setDirtyFields({}); setCommentText(savedStageNote(baseline.current)?.text || ''); setSavedCommentText(savedStageNote(baseline.current)?.text || ''); setFollowUpText('');
         setLocalChecklist(normalizeChecklist(baseline.current.project_checklist, baseline.current));
         setChecklistDirty(false); setNewItemLabel(''); setEditingRemarkId(null);
         setPendingSubsidyStatus(''); setPendingSubsidyRemark(''); setPendingSubsidyDate(getTodayDateString());
@@ -899,12 +921,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
             const items = newItemLabel.trim() ? [...localChecklist, { id: `custom_${Date.now()}`, label: newItemLabel.trim(), section: 'Project Checklist', checked: false, remark: '' }] : localChecklist;
             Object.assign(patch, checklistFields(items));
         }
-        if (commentText.trim()) {
-            const text = commentText.trim();
-            const line = `[${formatLogDate(timestamp)}] ${user.name} (${editData.stage || 'no stage'}): ${text}`;
-            patch.internal_remarks = [patch.internal_remarks ?? editData.internal_remarks, line].filter(Boolean).join('\n');
-            patch.stages_remarks = [...(editData.stages_remarks || []), { text, author: user.name, date: timestamp, stage: editData.stage || null }];
-        }
+        if (commentDirty) Object.assign(patch, saveStageNotePatch(baseline.current, commentText, user, timestamp));
         if (followUpText.trim()) patch.follow_ups = [...(editData.follow_ups || []), { text: followUpText.trim(), author: user.name, date: timestamp }];
         if (pendingSubsidyStatus) {
             const option = SUBSIDY_STATUS_OPTIONS.find(entry => entry.id === pendingSubsidyStatus);
@@ -922,8 +939,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
         return true;
     };
     const guard = useUnsavedChanges({
-        dirty: Object.keys(dirtyFields).length > 0 || !!commentText.trim() || !!followUpText.trim() || checklistDirty || !!newItemLabel.trim() || !!pendingSubsidyStatus || paymentDirty,
-        busy: saving || savingPayments || savingSubsidy, save: saveDrafts, discard: discardDrafts, close: onClose,
+        dirty: Object.keys(dirtyFields).length > 0 || commentDirty || !!followUpText.trim() || checklistDirty || !!newItemLabel.trim() || !!pendingSubsidyStatus || paymentDirty,
+        busy: saving || savingPayments || savingSubsidy || savingComment || savingStage, save: saveDrafts, discard: discardDrafts, close: onClose,
     });
 
     const SectionHeader = ({ title, id, icon: Icon, hideEdit = false }) => (
@@ -987,14 +1004,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
                                 <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm flex flex-col justify-between">
                                     <label className="text-sm text-stone-500 font-semibold uppercase mb-1 block">Primary Stage</label>
                                     <div className="flex gap-2">
-                                        <select value={editData.stage} onChange={async (e) => {
-                                            const newStage = e.target.value;
-                                            const oldStage = editData.stage;
-                                            setEditData(prev => ({ ...prev, stage: newStage }));
-                                            await onUpdate(customer.id, { stage: newStage });
-                                            await logActivity(user.id, 'stage_change', `STAGE: ${oldStage} → ${newStage}`, customer.id);
-                                            fetchLogs();
-                                        }} className="flex-1 p-2 bg-white border border-stone-200 rounded-lg font-semibold text-base text-stone-700 outline-none">
+                                        <select value={editData.stage} disabled={savingStage || savingComment} onChange={e => handleStageChange(e.target.value)} className="flex-1 p-2 bg-white border border-stone-200 rounded-lg font-semibold text-base text-stone-700 outline-none">
                                             {PRIMARY_STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                                         </select>
                                         {(() => {
@@ -1003,16 +1013,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
                                             return (
                                                 <button
                                                     type="button"
-                                                    disabled={!nextStage}
-                                                    onClick={async () => {
-                                                        if (nextStage) {
-                                                            const oldStage = editData.stage;
-                                                            setEditData(prev => ({ ...prev, stage: nextStage.id }));
-                                                            await onUpdate(customer.id, { stage: nextStage.id });
-                                                            await logActivity(user.id, 'stage_change', `STAGE: ${oldStage} → ${nextStage.id}`, customer.id);
-                                                            fetchLogs();
-                                                        }
-                                                    }}
+                                                    disabled={!nextStage || savingStage || savingComment}
+                                                    onClick={() => nextStage && handleStageChange(nextStage.id)}
                                                     title={nextStage ? `Move to next stage: ${nextStage.label}` : 'Already at the final stage'}
                                                     className="px-3 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all font-semibold text-base"
                                                 >
@@ -1026,18 +1028,20 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
                                 {/* Centralized comment box */}
                                 <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-sm flex flex-col justify-between">
                                     <label className="text-sm text-stone-500 font-semibold uppercase mb-1 flex items-center gap-1">
-                                        <MessageSquare size={11} /> Add Comment
+                                        <MessageSquare size={11} /> Stage Note
                                     </label>
                                     <div className="flex gap-2">
-                                        <input value={commentText} onChange={e => setCommentText(e.target.value)}
+                                        <input value={commentText} disabled={savingComment || savingStage} onChange={e => setCommentText(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && handleAddComment()}
                                             placeholder="Note for this customer..."
                                             className="flex-1 p-2 bg-white border border-stone-200 rounded-lg text-base text-stone-700 outline-none focus:ring-1 focus:ring-amber-300" />
-                                        <button type="button" onClick={handleAddComment} disabled={!commentText.trim()}
-                                            className="px-3 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all">
-                                            <Save size={13} />
+                                        <button type="button" onClick={handleAddComment} disabled={!commentDirty || savingComment || savingStage}
+                                            aria-label={savedCommentText && !commentDirty ? 'Note saved' : 'Save stage note'}
+                                            className={`px-3 py-2 rounded-lg text-white flex items-center justify-center flex-shrink-0 transition-all ${savedCommentText && !commentDirty ? 'bg-emerald-600' : 'bg-stone-900 disabled:opacity-30'}`}>
+                                            {savedCommentText && !commentDirty ? <CheckCircle2 size={16} /> : <Save size={16} />}
                                         </button>
                                     </div>
+                                    <p className="text-xs text-stone-500 mt-2">{savedCommentText && !commentDirty ? 'Saved. Moves to Internal Remarks with the next stage change.' : 'Save the note first; changing stage files it under the new stage.'}</p>
                                 </div>
                             </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, MapPin, Zap } from 'lucide-react';
+import { ArrowRight, MapPin, Zap, Phone } from 'lucide-react';
 import { quotationAmount, receivableAmount } from '../quotation.js';
 import { PRIMARY_STAGES } from '../constants';
 import { formatIndianCurrency } from '../utils';
@@ -36,6 +36,10 @@ export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFi
                 <span className="flex items-center gap-3 mt-3 text-sm text-stone-600">
                     <span className="flex items-center gap-1.5 min-w-0 flex-1"><MapPin size={14} className="shrink-0 text-stone-400" /><span title={customer.area} className="truncate">{customer.area || 'Area not added'}</span></span>
                     <span className="flex items-center gap-1 shrink-0"><Zap size={14} className="text-amber-500" />{customer.system_capacity_kwp ? `${customer.system_capacity_kwp} kWp` : '– kWp'}</span>
+                </span>
+                <span className="flex items-center gap-1.5 mt-2 text-sm text-stone-600">
+                    <Phone size={14} className="shrink-0 text-stone-400" />
+                    <span>{customer.phone_number || 'Phone not added'}</span>
                 </span>
                 {canSeeFinance && <span className="grid grid-cols-3 gap-2 w-full mt-auto pt-4">
                     {[

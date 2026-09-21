@@ -54,6 +54,28 @@ test('unsaved changes preserve forms and only leave after successful saves', asy
         });
         const customer={id:'demo',customer_name:'Sample',stage:'REGISTRATION DONE',project_type:'General',project_checklist:[],payments:[],quoted_amount:1000,receivables:1000};
         const user={userType:'staff',name:'Staff',id:'staff'};
+        await scenario('saved stage note stays green, survives reopening and moves only after successful stage change',async()=>{
+            let record={...customer,internal_remarks:'Existing remark'}, failStage=false;
+            const writes=[];
+            const update=async(id,patch)=>{if(failStage && patch.stage)throw Error('Stage failed');writes.push(patch);record={...record,...patch};};
+            await render(React.createElement(Detail,{customer:record,user,onClose:()=>{},onUpdate:update,onDelete:async()=>{}}));
+            await change(view.root.findByProps({placeholder:'Note for this customer...'}),'Ready for installation');
+            await click(view.root.findByProps({'aria-label':'Save stage note'}));
+            assert.equal(record.internal_remarks,'Existing remark');assert.equal(record.stages_remarks[0].pending,true);
+            assert.match(view.root.findByProps({'aria-label':'Note saved'}).props.className,/bg-emerald/);
+            await render(React.createElement(Detail,{customer:record,user,onClose:()=>{},onUpdate:update,onDelete:async()=>{}}));
+            assert.equal(view.root.findByProps({placeholder:'Note for this customer...'}).props.value,'Ready for installation');
+            const stageSelect=()=>view.root.findAllByType('select').find(node=>node.props.value===record.stage);
+            failStage=true;await change(stageSelect(),'DOCUMENTS PENDING');
+            assert.equal(record.stage,customer.stage);assert.equal(record.stages_remarks[0].pending,true);
+            assert.equal(view.root.findByProps({placeholder:'Note for this customer...'}).props.value,'Ready for installation');
+            failStage=false;await change(stageSelect(),'DOCUMENTS PENDING');
+            assert.equal(record.stage,'DOCUMENTS PENDING');assert.match(record.internal_remarks,/Documents Pending: Ready for installation/);
+            assert.equal(record.stages_remarks[0].stage,'DOCUMENTS PENDING');assert.equal(record.stages_remarks[0].pending,false);
+            assert.equal(view.root.findByProps({placeholder:'Note for this customer...'}).props.value,'');
+            const remark=record.internal_remarks;
+            await change(stageSelect(),'PORTAL STEPS PENDING');assert.equal(record.internal_remarks,remark);
+        });
         await scenario('customer tab switch saves comment before navigating and preserves failed saves',async()=>{
             const writes=[];let fail=true;
             await render(React.createElement(Detail,{customer,user,onClose:()=>{},onUpdate:async(id,patch)=>{if(fail)throw new Error('Database unavailable');writes.push(patch);},onDelete:async()=>{}}));
@@ -62,7 +84,7 @@ test('unsaved changes preserve forms and only leave after successful saves', asy
             assert.deepEqual(prompt(view)[0].findAllByType('button').map(text), ['Keep editing', 'Save and exit']);
             await click(button(view,'Save and exit')); assert.equal(prompt(view).length,1); assert.equal(writes.length,0);
             assert.equal(view.root.findByProps({placeholder:'Note for this customer...'}).props.value,'Remember this');
-            fail=false; await click(button(view,'Save and exit')); assert.equal(writes.length,1); assert.match(writes[0].internal_remarks,/Remember this/);
+            fail=false; await click(button(view,'Save and exit')); assert.equal(writes.length,1); assert.equal(writes[0].internal_remarks, undefined); assert.equal(writes[0].stages_remarks[0].text, 'Remember this'); assert.equal(writes[0].stages_remarks[0].pending, true);
             assert.equal(prompt(view).length,0); assert.ok(button(view,'Overview'));
             assert.ok(view.root.findAll(node=>node.props.placeholder==='Note for this customer...').length===0);
         });
