@@ -461,7 +461,7 @@ export default function Dashboard({ user, onLogout }) {
                                 <div className="w-8 h-8 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" />
                             </div>
                         ) : filtered.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                                 {filtered.map(c => (
                                     <CustomerCard canSeeFinance={access.finance} key={c.id} customer={c} onSelect={setSelectedCustomer} />
                                 ))}
