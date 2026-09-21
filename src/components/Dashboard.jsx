@@ -141,14 +141,6 @@ export default function Dashboard({ user, onLogout }) {
         setCustomers(prev => prev.filter(c => c.id !== id));
     };
 
-    const handleMoveStage = async (id, newStage) => {
-        const customer = customers.find(c => c.id === id);
-        await handleUpdateCustomer(id, { stage: newStage });
-        logActivity(user.id, 'stage_change',
-            `${customer?.customer_name}: Moved to ${PRIMARY_STAGES.find(s => s.id === newStage)?.label || newStage}`
-        );
-    };
-
     const handleAddLead = async (data) => {
         await recordRequest('create', null, editablePatch(user.userType, data));
         logActivity(user.id, 'create', `Added new lead: ${data.customer_name}`, `Done by: ${user.name}`);
@@ -471,7 +463,7 @@ export default function Dashboard({ user, onLogout }) {
                         ) : filtered.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5">
                                 {filtered.map(c => (
-                                    <CustomerCard canSeeFinance={access.finance} key={c.id} customer={c} onSelect={setSelectedCustomer} onMoveStage={handleMoveStage} />
+                                    <CustomerCard canSeeFinance={access.finance} key={c.id} customer={c} onSelect={setSelectedCustomer} />
                                 ))}
                             </div>
                         ) : (
