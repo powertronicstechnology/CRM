@@ -1,3 +1,4 @@
+import { DROPDOWN_DEFAULTS, financialTags, withCurrentOption } from '../dropdowns.js';
 import StageChangeConfirm from './StageChangeConfirm';
 import { savedStageNote, saveStageNotePatch, stageTransitionPatch } from '../stageRemarks.js';
 import ActivityHistory from './ActivityHistory.jsx';
@@ -22,25 +23,6 @@ import { PRIMARY_STAGES } from '../constants';
 import { normalizeChecklist } from '../models';
 import { logActivity, formatLogDate, formatDate } from '../utils';
 import { supabase } from '../supabase';
-
-const GENERAL_TAGS = ["Initial", "Installation", "Final payment"];
-const PM_SURYA_TAGS = [
-    "Registration payment 20k",
-    "Installation payment",
-    "Quotation amount",
-    "Final payment after meter installation"
-];
-
-const DEFAULT_PAYMENT_METHODS = ["ONL", "CHQ", "DD", "CASH"];
-
-function getFinancialTags(projectType) {
-    if (!projectType) return GENERAL_TAGS;
-    const normalized = projectType.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (normalized.includes('surya')) {
-        return PM_SURYA_TAGS;
-    }
-    return GENERAL_TAGS;
-}
 
 // ─── formatMoney: Indian comma system (₹1,00,000) ────────────────────────────
 function fmt(val) {
@@ -90,67 +72,15 @@ const getInitialPayments = (cust) => {
 };
 
 // ─── MetaSelect: dropdown that lets the user type+add a new option ───────────
-function MetaSelect({ label, field, value, onChange, category, options = [], isEditing }) {
-    const [adding, setAdding] = useState(false);
-    const [newVal, setNewVal] = useState('');
-    const [localOptions, setLocalOptions] = useState(options);
-
-    useEffect(() => { setLocalOptions(options); }, [options.length]);
-
-    const handleAdd = async () => {
-        const trimmed = newVal.trim();
-        if (!trimmed) return;
-        await supabase.from('metadata').insert({ category, label: trimmed });
-        setLocalOptions(prev => [...prev, trimmed]);
-        onChange(field, trimmed);
-        setNewVal('');
-        setAdding(false);
-    };
-
-    if (!isEditing) {
-        return (
-            <div className="bg-stone-50 py-2.5 px-3 rounded-2xl">
-                <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">{label}</p>
-                <p className="text-base font-semibold truncate text-stone-800">{value || '–'}</p>
-            </div>
-        );
-    }
-
-    if (adding) {
-        return (
-            <div className="bg-stone-50 py-2.5 px-3 rounded-2xl space-y-1">
-                <p className="text-sm text-stone-500 uppercase tracking-wider font-semibold">{label} — New</p>
-                <div className="flex gap-1">
-                    <input autoFocus value={newVal} onChange={e => setNewVal(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                        placeholder={`New ${label}...`}
-                        className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-amber-300" />
-                    <button onClick={handleAdd} className="px-3 py-1 bg-amber-500 text-white rounded-lg text-base font-semibold">Add</button>
-                    <button onClick={() => setAdding(false)} className="px-3 py-1 bg-stone-200 text-stone-600 rounded-lg text-base">✕</button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="bg-stone-50 py-2.5 px-3 rounded-2xl">
-            <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">{label}</p>
-            <div className="flex gap-1">
-                <select value={value || ''} onChange={e => onChange(field, e.target.value)}
-                    className="flex-1 bg-white border border-stone-200 rounded-lg px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-amber-300">
-                    <option value="">Select...</option>
-                    {localOptions.map(o => <option key={o}>{o}</option>)}
-                </select>
-                <button onClick={() => setAdding(true)} title="Add new option"
-                    className="px-2 py-1 bg-stone-100 hover:bg-amber-50 hover:text-amber-600 text-stone-400 rounded-lg text-base transition-colors flex items-center justify-center">
-                    <Plus className="w-3.5 h-3.5" />
-                </button>
-            </div>
-        </div>
-    );
+function MetaSelect({ label, field, value, onChange, options = [], isEditing }) {
+    return <div className="bg-stone-50 py-2.5 px-3 rounded-2xl">
+        <p className="text-sm text-stone-500 uppercase tracking-wider mb-0.5 font-semibold">{label}</p>
+        {isEditing ? <select aria-label={label} value={value || ''} onChange={e => onChange(field, e.target.value)} className="w-full bg-white border border-stone-200 rounded-lg px-2 py-1 text-base">
+            <option value="">Select...</option>
+            {withCurrentOption(options, value).map(o => <option key={o} value={o}>{o}</option>)}
+        </select> : <p className="text-base font-semibold text-stone-800">{value || '–'}</p>}
+    </div>;
 }
-
-// ─── DetailItem / EditableDetailItem ──────────────────────────────────────────
 function DetailItem({ label, value, isMoney = false, isEnergy = false, noTruncate = false, className = "", type = "text", options }) {
     let displayVal = value || '–';
     if (type === 'date' && value) {
@@ -210,38 +140,18 @@ function EditableDetailItem({ label, field, value, onChange, type = 'text', isMo
 // ─── Standalone Sequential Payments Manager ──────────────────────────────────
 function PaymentsManager({ payments = [], onSavePayments, saving = false, draftRef, onDraftChange, requestNavigation, projectType = 'General', receivables = 0, totalReceived = 0, meta = {} }) {
     const maxPayments = String(projectType || '').toLowerCase().includes('surya') ? 5 : 3;
-    const [addingMethod, setAddingMethod] = useState(false);
-    const [newMethod, setNewMethod] = useState('');
-    const [customMethods, setCustomMethods] = useState(meta['payment_method'] || []);
-
+    const allMethods = meta.payment_method ?? DROPDOWN_DEFAULTS.payment_method;
+    const defaultMethod = allMethods[0] || '';
     // Active new payment input state
     const [nextPayment, setNextPayment] = useState({
         amount: '',
-        remark: 'ONL',
+        remark: defaultMethod,
         date: getTodayDateString()
     });
 
     // Currently editing index for previously saved payments
     const [editingIndex, setEditingIndex] = useState(null);
-    const [editPaymentState, setEditPaymentState] = useState({ amount: '', remark: 'ONL', date: getTodayDateString() });
-
-    useEffect(() => {
-        if (meta['payment_method']) setCustomMethods(meta['payment_method']);
-    }, [meta['payment_method']]);
-
-    const allMethods = Array.from(new Set([
-        ...DEFAULT_PAYMENT_METHODS,
-        ...(customMethods.map(m => typeof m === 'object' ? m.label || m.value : m))
-    ]));
-
-    const handleAddNewMethod = async () => {
-        const trimmed = newMethod.trim().toUpperCase();
-        if (!trimmed) return;
-        await supabase.from('metadata').insert({ category: 'payment_method', label: trimmed });
-        setCustomMethods(prev => [...prev, trimmed]);
-        setNewMethod('');
-        setAddingMethod(false);
-    };
+    const [editPaymentState, setEditPaymentState] = useState({ amount: '', remark: defaultMethod, date: getTodayDateString() });
 
     // Filter valid saved payments
     const savedPayments = payments.filter(p => p && p.amount !== '' && p.amount !== null && p.amount !== undefined);
@@ -254,7 +164,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, draftR
         const newSlot = {
             no: savedPayments.length + 1,
             amount: nextPayment.amount,
-            remark: nextPayment.remark || 'ONL',
+            remark: nextPayment.remark || defaultMethod,
             date: nextPayment.date || getTodayDateString()
         };
         const updatedList = [...savedPayments, newSlot];
@@ -262,7 +172,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, draftR
         // Reset new payment slot
         setNextPayment({
             amount: '',
-            remark: 'ONL',
+            remark: defaultMethod,
             date: getTodayDateString()
         });
     };
@@ -280,7 +190,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, draftR
         setEditingIndex(idx);
         setEditPaymentState({
             amount: target.amount,
-            remark: target.remark || 'ONL',
+            remark: target.remark || defaultMethod,
             date: target.date || getTodayDateString()
         });
     };
@@ -302,23 +212,23 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, draftR
         setEditingIndex(null);
     };
 
-    const paymentDirty = !!newMethod.trim() || nextPayment.amount !== '' || nextPayment.remark !== 'ONL' || nextPayment.date !== getTodayDateString()
-        || (editingIndex !== null && JSON.stringify(editPaymentState) !== JSON.stringify({ amount: savedPayments[editingIndex]?.amount, remark: savedPayments[editingIndex]?.remark || 'ONL', date: savedPayments[editingIndex]?.date || getTodayDateString() }));
+    const paymentDirty = nextPayment.amount !== '' || nextPayment.remark !== defaultMethod || nextPayment.date !== getTodayDateString()
+        || (editingIndex !== null && JSON.stringify(editPaymentState) !== JSON.stringify({ amount: savedPayments[editingIndex]?.amount, remark: savedPayments[editingIndex]?.remark || defaultMethod, date: savedPayments[editingIndex]?.date || getTodayDateString() }));
     useEffect(() => { onDraftChange?.(paymentDirty); }, [paymentDirty, onDraftChange]);
     useEffect(() => () => { if (draftRef) draftRef.current = null; onDraftChange?.(false); }, [draftRef, onDraftChange]);
     if (draftRef) draftRef.current = {
         dirty: paymentDirty,
         collect: () => {
             let result = savedPayments.map((payment, index) => index === editingIndex ? { ...payment, ...editPaymentState } : payment);
-            if (newMethod.trim() || nextPayment.amount !== '' || nextPayment.remark !== 'ONL' || nextPayment.date !== getTodayDateString()) {
+            if (nextPayment.amount !== '' || nextPayment.remark !== defaultMethod || nextPayment.date !== getTodayDateString()) {
                 if (!Number.isFinite(Number(nextPayment.amount)) || Number(nextPayment.amount) <= 0) throw new Error('Enter a payment amount greater than zero, or keep editing.');
-                result = [...result, { ...nextPayment, remark: newMethod.trim().toUpperCase() || nextPayment.remark, no: result.length + 1 }];
+                result = [...result, { ...nextPayment, remark: nextPayment.remark, no: result.length + 1 }];
             }
             if (result.some(payment => !Number.isFinite(Number(payment.amount)) || Number(payment.amount) <= 0)) throw new Error('Payment amounts must be greater than zero.');
             if (result.length > maxPayments) throw new Error('The maximum number of payments has been reached.');
             return paymentFields(result);
         },
-        reset: () => { setNewMethod(''); setAddingMethod(false); setEditingIndex(null); setNextPayment({ amount: '', remark: 'ONL', date: getTodayDateString() }); onDraftChange?.(false); },
+        reset: () => { setEditingIndex(null); setNextPayment({ amount: '', remark: defaultMethod, date: getTodayDateString() }); onDraftChange?.(false); },
     };
 
     const canShowNextSlot = !isFullyPaid && savedPayments.length < maxPayments;
@@ -375,11 +285,11 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, draftR
                                     <div>
                                         <label className="text-sm text-stone-500 uppercase font-semibold block mb-1">Method</label>
                                         <select
-                                            value={editPaymentState.remark || 'ONL'}
+                                            value={editPaymentState.remark || defaultMethod}
                                             onChange={e => setEditPaymentState(prev => ({ ...prev, remark: e.target.value }))}
                                             className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-base font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                         >
-                                            {allMethods.map(m => <option key={m} value={m}>{m}</option>)}
+                                            {withCurrentOption(allMethods, editPaymentState.remark).map(m => <option key={m} value={m}>{m}</option>)}
                                         </select>
                                     </div>
                                     <div>
@@ -417,7 +327,7 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, draftR
                                     ₹{Number(p.amount || 0).toLocaleString('en-IN')}
                                 </span>
                                 <span className="text-sm font-semibold text-stone-600 bg-stone-200/60 px-2 py-0.5 rounded-md uppercase">
-                                    {p.remark || 'ONL'}
+                                    {p.remark || defaultMethod}
                                 </span>
                                 <span className="text-base text-stone-500 font-medium">
                                     {p.date ? formatDate(p.date) : '–'}
@@ -471,48 +381,14 @@ function PaymentsManager({ payments = [], onSavePayments, saving = false, draftR
                             <div>
                                 <div className="flex items-center justify-between mb-1">
                                     <label className="text-sm text-stone-500 uppercase font-semibold">Method</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => setAddingMethod(!addingMethod)}
-                                        className="text-base font-semibold text-amber-600 hover:underline flex items-center gap-0.5"
-                                    >
-                                        <Plus size={10} /> Add
-                                    </button>
                                 </div>
-                                {addingMethod ? (
-                                    <div className="flex gap-1">
-                                        <input
-                                            type="text"
-                                            placeholder="New method..."
-                                            value={newMethod}
-                                            onChange={e => setNewMethod(e.target.value)}
-                                            onKeyDown={e => e.key === 'Enter' && handleAddNewMethod()}
-                                            className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1.5 text-base focus:outline-none"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={handleAddNewMethod}
-                                            className="bg-amber-500 text-white px-2 py-1 rounded-lg text-base font-semibold"
-                                        >
-                                            Save
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setAddingMethod(false)}
-                                            className="bg-stone-200 text-stone-600 px-2 py-1 rounded-lg text-base"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                ) : (
                                     <select
-                                        value={nextPayment.remark || 'ONL'}
+                                        value={nextPayment.remark || defaultMethod}
                                         onChange={e => setNextPayment(prev => ({ ...prev, remark: e.target.value }))}
                                         className="w-full bg-white border border-stone-200 rounded-lg px-2.5 py-2 text-base font-semibold text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                     >
-                                        {allMethods.map(m => <option key={m} value={m}>{m}</option>)}
+                                        {withCurrentOption(allMethods, nextPayment.remark).map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
-                                )}
                             </div>
 
                             <div>
@@ -1091,8 +967,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
                                         await logActivity(user.id, 'update', `${customer.customer_name}: Project Type changed to ${newType}`, customer.id);
                                         fetchLogs();
                                     }} className="w-full p-2 bg-white border border-stone-200 rounded-lg font-semibold text-base text-stone-700 outline-none">
-                                        <option value="General">General</option>
-                                        <option value="PM SURYA">PM SURYA</option>
+                                        {withCurrentOption(meta.project_type ?? DROPDOWN_DEFAULTS.project_type, editData.project_type).map(type => <option key={type} value={type}>{type}</option>)}
                                     </select>
                                 </div>
 
@@ -1107,7 +982,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
                                         fetchLogs();
                                     }} className="w-full p-2 bg-white border border-stone-200 rounded-lg font-semibold text-base text-stone-700 outline-none">
                                         <option value="">Select Tag...</option>
-                                        {getFinancialTags(editData.project_type).map(tag => (
+                                        {withCurrentOption(financialTags(meta, editData.project_type), editData.financial_tag).map(tag => (
                                             <option key={tag} value={tag}>{tag}</option>
                                         ))}
                                     </select>

@@ -2,12 +2,13 @@
 // Modal form for creating a new lead with specified layout and validation.
 // ──────────────────────────────────────────────────────────────────────────────
 
+import { DROPDOWN_DEFAULTS } from '../dropdowns.js';
 import { useState, useRef } from 'react';
 import UnsavedChanges, { useUnsavedChanges } from './UnsavedChanges';
 import { X, Plus } from 'lucide-react';
 import { DEFAULT_PROJECT_CHECKLIST } from '../models';
 
-export default function AddLeadModal({ onClose, onSave, canSeeFinance }) {
+export default function AddLeadModal({ onClose, onSave, canSeeFinance, meta = {} }) {
     const [form, setForm] = useState({
         customer_name: '',
         phone_number: '',
@@ -17,7 +18,7 @@ export default function AddLeadModal({ onClose, onSave, canSeeFinance }) {
         system_capacity_kwp: '',
         full_installation_address: '', // Full Address (optional)
         quoted_amount: '',
-        project_type: 'General', // Dropdown options: General / PM SURYA
+        project_type: (meta.project_type ?? DROPDOWN_DEFAULTS.project_type)[0] || '', // Dropdown options: General / PM SURYA
     });
     const initialForm = useRef(form);
     const savingRef = useRef(false);
@@ -120,8 +121,8 @@ export default function AddLeadModal({ onClose, onSave, canSeeFinance }) {
                         <label className="block text-sm font-semibold text-stone-600 mb-1">Project Type *</label>
                         <select value={form.project_type} onChange={e => set('project_type', e.target.value)}
                             className="w-full px-3 py-2.5 border border-stone-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white">
-                            <option value="General">General</option>
-                            <option value="PM SURYA">PM SURYA</option>
+                            <option value="">Select project type...</option>
+                            {(meta.project_type ?? DROPDOWN_DEFAULTS.project_type).map(type => <option key={type} value={type}>{type}</option>)}
                         </select>
                     </div>
                 </div>

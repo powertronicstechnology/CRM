@@ -1,39 +1,23 @@
+import { financialTags } from '../dropdowns.js';
 import { quotationAmount } from '../quotation.js';
 import QuotationValue from './QuotationValue.jsx';
 import { useState } from 'react';
 import { Tag } from 'lucide-react';
-import { FINANCIAL_TAGS, FINANCIAL_TAG_COLORS } from '../constants';
+import { FINANCIAL_TAG_COLORS } from '../constants';
 import { formatIndianCurrency } from '../utils';
-
-const GENERAL_TAGS_LIST = [
-    "Initial",
-    "Installation",
-    "Final payment"
-];
-
-const PM_SURYA_TAGS_LIST = [
-    "Registration payment 20k",
-    "Installation payment",
-    "Quotation amount",
-    "Final payment after meter installation"
-];
 
 export default function FinancialView({
     customers,
     onSelectCustomer,
+    meta = {},
     projectType = 'General'
 }) {
     const [activeFilter, setActiveFilter] = useState(null);
 
     const isSuryaFilter = projectType.toLowerCase().includes('surya');
 
-    const activeTagsList = isSuryaFilter
-        ? PM_SURYA_TAGS_LIST
-        : GENERAL_TAGS_LIST;
-
-    const projectTags = FINANCIAL_TAGS.filter(tag =>
-        activeTagsList.includes(tag.id)
-    );
+    const activeTagsList = financialTags(meta, projectType);
+    const projectTags = activeTagsList.map(id => ({id, label: id, icon: Tag}));
 
     /*
      * Get all tagged customers belonging to this project type.

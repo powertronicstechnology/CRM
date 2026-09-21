@@ -1,3 +1,4 @@
+import { groupDropdowns } from './dropdowns.js';
 // ─── utils.jsx ────────────────────────────────────────────────────────────────
 // Pure utility functions — no UI, no React state.
 // ──────────────────────────────────────────────────────────────────────────────
@@ -27,27 +28,18 @@ export async function logActivity(userId, action, message, details = '') {
 import { useState, useEffect } from 'react';
 
 export function useMetadata() {
-    const [meta, setMeta] = useState({});
+    const [meta, setMeta] = useState(() => groupDropdowns());
     useEffect(() => {
-        supabase.from('metadata').select('category, label').then(({ data }) => {
-            const defaults = {
-                panel: ['ADANI', 'WAAREE', 'PAHAL', 'ADANI TOPCON', 'WAAREE TOPCON', 'PAHAL TOPCON'],
-                inverter: ['SOLARYAAN', 'KSOLARE', 'GROWATT', 'POLYCAB', 'WAAREE', 'YAAN'],
-                meter_phase: ['S', 'T', 'T (EXTEN)'],
-                payment_type: ['Online', 'Cheque'],
-                project_type: ['General', 'PM Surya Ghar'],
-            };
-            const grouped = { ...defaults };
-            if (data) {
-                data.forEach(({ category, label }) => {
-                    if (!grouped[category]) grouped[category] = [];
-                    if (!grouped[category].includes(label)) {
-                        grouped[category].push(label);
-                    }
-                });
-            }
-            setMeta(grouped);
-        });
+        let mounted = true;
+        const refresh = async () => {
+            const {data, error} = await supabase.from('metadata').select('category, label');
+            if (mounted && !error) setMeta(groupDropdowns(data));
+        };
+        refresh();
+        window.addEventListener('metadata-updated', refresh);
+        window.addEventListener('focus', refresh);
+        const timer = setInterval(refresh, 30000);
+        return () => { mounted = false; clearInterval(timer); window.removeEventListener('metadata-updated', refresh); window.removeEventListener('focus', refresh); };
     }, []);
     return meta;
 }

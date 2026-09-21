@@ -14,6 +14,7 @@ import { PRIMARY_STAGES } from '../constants';
 import { permissionsFor } from '../access';
 import { editablePatch, recordRequest } from '../records';
 
+import OperationsView from './OperationsView';
 import ExportView from './ExportView';
 import DashboardView       from './DashboardView';
 import FinancialView       from './FinancialView';
@@ -26,7 +27,7 @@ import UserManagementView  from './UserManagementView';
 import TrashView           from './TrashView';
 
 import {
-    LayoutDashboard, IndianRupee, Activity, UserCog, Menu, X,
+    LayoutDashboard, IndianRupee, Activity, UserCog, Menu, X, Settings2,
     Search, Plus, Download, LogOut, Sun, Trash2, Users, Banknote,
 } from 'lucide-react';
 
@@ -239,6 +240,7 @@ export default function Dashboard({ user, onLogout }) {
         : currentView === 'dashboard' ? 'Business Dashboard'
         : currentView === 'financial' ? `Financial Tags (${financialProjectType === 'General' ? 'General' : 'PM SURYA'})`
         : currentView === 'subsidy'   ? 'Subsidy Overview'
+        : currentView === 'operations' ? 'Operations'
         : currentView === 'activity'  ? 'Activity Log'
         : currentView === 'users'     ? 'User Management'
         : currentView === 'trash'     ? 'Trash'
@@ -320,6 +322,7 @@ export default function Dashboard({ user, onLogout }) {
                     {/* System */}
                     <div className="text-xs uppercase font-semibold text-stone-300 px-3 pt-5 pb-2 tracking-wide">System</div>
                     <NavBtn view="activity" icon={Activity}  label="Activity Log"      count={0} />
+                    <NavBtn view="operations" icon={Settings2} label="Operations" count={0} />
                     {user.userType === 'admin' && (
                         <NavBtn view="users" icon={UserCog} label="User Management" count={0} />
                     )}
@@ -448,9 +451,10 @@ export default function Dashboard({ user, onLogout }) {
 
                     {currentView === 'export' && <ExportView key={user.userType} records={active} filteredRecords={filteredActive} userType={user.userType} monthLabel={selectedMonth === 'All' ? 'All months' : MONTHS[Number(selectedMonth)]} disabled={loading || !!dataError} />}
                     {currentView === 'dashboard' && <DashboardView customers={filteredActive} loading={loading} access={access} />}
-                    {currentView === 'financial' && access.finance && <FinancialView customers={filteredActive} onSelectCustomer={setSelectedCustomer} projectType={financialProjectType} />}
+                    {currentView === 'financial' && access.finance && <FinancialView meta={meta} customers={filteredActive} onSelectCustomer={setSelectedCustomer} projectType={financialProjectType} />}
                     {currentView === 'subsidy' && access.finance && <SubsidyView customers={filteredActive} onSelectCustomer={setSelectedCustomer} />}
                     {currentView === 'activity' && access.admin && <ActivityLogView />}
+                    {currentView === 'operations' && access.admin && <OperationsView user={user} />}
                     {currentView === 'users' && user.userType === 'admin' && <UserManagementView currentUser={user} />}
 
                     {/* Trash view */}
