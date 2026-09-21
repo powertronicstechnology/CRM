@@ -1,3 +1,4 @@
+import StageChangeConfirm from './StageChangeConfirm';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, MapPin, Zap, Phone } from 'lucide-react';
 import { quotationAmount, receivableAmount } from '../quotation.js';
@@ -6,16 +7,20 @@ import { formatIndianCurrency } from '../utils';
 
 export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFinance = false }) {
     const [stage, setStage] = useState(customer.stage || '');
+    const [pendingStage, setPendingStage] = useState(null);
+    const stageIndex = PRIMARY_STAGES.findIndex(option => option.id === customer.stage);
+    const nextStage = stageIndex >= 0 ? PRIMARY_STAGES[stageIndex + 1] : null;
+    const targetStage = stage && stage !== customer.stage ? PRIMARY_STAGES.find(option => option.id === stage) : nextStage;
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const savingRef = useRef(false);
-    useEffect(() => { setStage(customer.stage || ''); setError(''); }, [customer.id, customer.stage]);
-    const saveStage = async () => {
-        if (savingRef.current || !stage || stage === customer.stage) return;
+    useEffect(() => { setStage(customer.stage || ''); setError(''); setPendingStage(null); }, [customer.id, customer.stage]);
+    const saveStage = async (target) => {
+        if (savingRef.current || !target || target === customer.stage) return;
         savingRef.current = true;
         setSaving(true); setError('');
-        try { await onMoveStage(customer.id, stage); }
-        catch { setError('Could not save stage. Try again.'); }
+        try { await onMoveStage(customer.id, target); return true; }
+        catch { setError('Could not save stage. Try again.'); return false; }
         finally { savingRef.current = false; setSaving(false); }
     };
     const outstanding = receivableAmount(customer);
@@ -60,14 +65,15 @@ export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFi
                         {!PRIMARY_STAGES.some(option => option.id === stage) && <option value={stage}>{stage || 'Select stage'}</option>}
                         {PRIMARY_STAGES.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                     </select>
-                    <button type="button" onClick={saveStage} disabled={saving || !stage || stage === customer.stage}
-                        aria-label="Save stage" title={saving ? 'Saving stage…' : 'Save selected stage'}
+                    <button type="button" onClick={() => targetStage && setPendingStage(targetStage)} disabled={saving || !targetStage}
+                        aria-label="Save stage" title={targetStage ? `Change stage to ${targetStage.label}` : 'Already at the final stage'}
                         className="shrink-0 px-2.5 bg-stone-900 text-white rounded-xl disabled:opacity-30 focus-visible:ring-2 focus-visible:ring-amber-500">
                         <ArrowRight size={16} />
                     </button>
                 </div>
                 {error && <p role="alert" className="text-xs text-red-700 mt-1">{error}</p>}
             </div>
+            {pendingStage && <StageChangeConfirm label={pendingStage.label} onCancel={() => setPendingStage(null)} onConfirm={() => saveStage(pendingStage.id)} />}
         </article>
     );
 }

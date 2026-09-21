@@ -1,3 +1,4 @@
+import StageChangeConfirm from './StageChangeConfirm';
 import { savedStageNote, saveStageNotePatch, stageTransitionPatch } from '../stageRemarks.js';
 import ActivityHistory from './ActivityHistory.jsx';
 import { receivableAmount } from '../quotation.js';
@@ -606,6 +607,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
     const [commentText, setCommentText] = useState(() => savedStageNote(customer)?.text || '');
     const [savedCommentText, setSavedCommentText] = useState(() => savedStageNote(customer)?.text || '');
     const [savingComment, setSavingComment] = useState(false);
+    const [confirmNextStage, setConfirmNextStage] = useState(null);
     const [savingStage, setSavingStage] = useState(false);
     const commentSavingRef = useRef(false);
     const stageSavingRef = useRef(false);
@@ -823,7 +825,8 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
             setSavedCommentText('');
             await logActivity(user.id, 'stage_change', `STAGE: ${oldStage} → ${newStage}`, customer.id);
             fetchLogs();
-        } catch (error) { setSaveError(error.message || 'Unable to change stage'); }
+            return true;
+        } catch (error) { setSaveError(error.message || 'Unable to change stage'); return false; }
         finally { stageSavingRef.current = false; setSavingStage(false); }
     };
 
@@ -1014,7 +1017,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
                                                 <button
                                                     type="button"
                                                     disabled={!nextStage || savingStage || savingComment}
-                                                    onClick={() => nextStage && handleStageChange(nextStage.id)}
+                                                    onClick={() => nextStage && setConfirmNextStage(nextStage)}
                                                     title={nextStage ? `Move to next stage: ${nextStage.label}` : 'Already at the final stage'}
                                                     className="px-3 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30 disabled:hover:bg-stone-900 flex items-center justify-center flex-shrink-0 transition-all font-semibold text-base"
                                                 >
@@ -1565,6 +1568,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
 
             {guard.dialog && <UnsavedChanges {...guard.dialog} allowLeave={false} saveLabel="Save and exit" />}
 
+            {confirmNextStage && <StageChangeConfirm label={confirmNextStage.label} onCancel={() => setConfirmNextStage(null)} onConfirm={() => handleStageChange(confirmNextStage.id)} />}
             {/* Soft-delete confirm */}
             {showDeleteConfirm && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
