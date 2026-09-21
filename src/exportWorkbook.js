@@ -16,11 +16,10 @@ export const CUSTOMER_COLUMNS = [
     column('METER INSTALED', 'meter_instaled'), column('SUBSIDY CLAIM', 'subsidy_claim'),
     column('SUBSIDY RECEIVED', 'subsidy_received'), column('FILE GIVEN TO CUSTOMER', 'file_given_to_customer'),
     column('Column 1', undefined), column('Column 2', undefined),
-    column('SUBDIVISION', 'subdivision'), column('CRN', 'crn'), column('RECORD ID', 'id', 38),
+    column('SUBDIVISION', 'subdivision'), column('CRN', 'crn'),
 ];
 const FINANCIAL_COLUMNS = [
-    column('SR. NO', null, 9), column('NAME', 'customer_name', 34),
-    column('CRN', 'crn'), column('RECORD ID', 'id', 38), column('PROJECT TYPE', 'project_type'),
+    column('SR. NO', null, 9), column('CRN', 'crn'), column('NAME', 'customer_name', 34), column('PROJECT TYPE', 'project_type'),
     column('FINANCIAL TAG', 'financial_tag', 34), column('QUOTATION AMOUNT', 'effective_quotation'), column('ORIGINAL QUOTATION', 'quoted_amount'), column('FINANCE QUOTATION', 'quoted_amount_3'),
     column('QUOTATION AMOUNT 2', 'quoted_amount_2'), column('QUOTATION AMOUNT 3', 'quoted_amount_3'),
     column('TOTAL RECEIVED', 'total_received'), column('RECEIVABLES', 'receivables'),

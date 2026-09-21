@@ -45,7 +45,9 @@ test('Admin and Staff get both real Excel sheets with customer column order and 
         assert.equal(value(financial, 'RECEIVABLES'), 0);
         assert.equal(value(financial, 'PAYMENT 1'), 0);
         assert.equal(value(financial, 'PAYMENT NOTES'), JSON.stringify(fixture.payment_notes));
-        assert.equal(value(financial, 'RECORD ID'), value(customers, 'RECORD ID'));
+        assert.ok(!customers.getRow(1).values.includes('RECORD ID'));
+        assert.ok(!financial.getRow(1).values.includes('RECORD ID'));
+        assert.equal(financial.getRow(1).getCell(2).value, 'CRN');
         assert.equal(customers.views[0].state, 'frozen');
         assert.ok(customers.autoFilter);
         assert.ok(!JSON.stringify(workbook.model).includes('must not export'));
