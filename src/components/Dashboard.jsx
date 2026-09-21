@@ -351,6 +351,7 @@ export default function Dashboard({ user, onLogout }) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                        {currentView !== 'export' && <>
                         <select aria-label="Financial year" value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="bg-stone-100 text-stone-700 text-sm px-3 py-2 rounded-xl focus:ring-2 focus:ring-amber-300">
                             <option value="All">All financial years</option>
                             {years.map(year => <option key={year} value={year}>FY {financialYearLabel(year)}</option>)}
@@ -380,6 +381,7 @@ export default function Dashboard({ user, onLogout }) {
                         )}
 
 
+                        </>}
                         {/* ── Global search (always visible) ── */}
                         <div className="relative" ref={globalSearchRef}>
                             <Search className="absolute left-3 top-2.5 text-stone-400 w-4 h-4" />
@@ -442,7 +444,7 @@ export default function Dashboard({ user, onLogout }) {
                 <div className="flex-1 p-4 lg:p-6">
                     {dataError && <div role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{dataError}<button onClick={() => fetchData()} className="ml-3 underline">Retry</button></div>}
 
-                    {currentView === 'export' && <ExportView key={user.userType} records={active} initialYear={selectedYear} onYearChange={setSelectedYear} selectedMonth={selectedMonth} userType={user.userType} monthLabel={selectedMonth === 'All' ? 'All months' : MONTHS[Number(selectedMonth)]} disabled={loading || !!dataError} />}
+                    {currentView === 'export' && <ExportView key={user.userType} records={active} initialYear={selectedYear} onYearChange={setSelectedYear} selectedMonth={selectedMonth} userType={user.userType} onMonthChange={setSelectedMonth} disabled={loading || !!dataError} />}
                     {currentView === 'dashboard' && <DashboardView customers={filteredActive} loading={loading} access={access} />}
                     {currentView === 'financial' && access.finance && <FinancialView meta={meta} customers={filteredActive} onSelectCustomer={setSelectedCustomer} projectType={financialProjectType} />}
                     {currentView === 'subsidy' && access.finance && <SubsidyView customers={filteredActive} onSelectCustomer={setSelectedCustomer} />}

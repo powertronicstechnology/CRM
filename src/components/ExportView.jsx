@@ -4,17 +4,16 @@ import { Download, FileSpreadsheet } from 'lucide-react';
 import { permissionsFor } from '../access';
 import { exportSheets, downloadExportWorkbook } from '../exportWorkbook.js';
 
-export default function ExportView({ records, initialYear, onYearChange, selectedMonth = 'All', userType, monthLabel, disabled }) {
+export default function ExportView({ records, initialYear, onYearChange, selectedMonth = 'All', onMonthChange, userType, disabled }) {
     const access = permissionsFor(userType);
     const [selection, setSelection] = useState(access.crm && access.finance ? 'all' : access.crm ? 'customers' : 'finance');
-    const [scope, setScope] = useState('filtered');
     const year = initialYear ?? String(financialYear());
     const setYear = onYearChange;
     const [previewName, setPreviewName] = useState('');
     const [exporting, setExporting] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
-    const selectedRecords = records.filter(record => matchesPeriod(record, year, scope === 'all' ? 'All' : selectedMonth));
+    const selectedRecords = records.filter(record => matchesPeriod(record, year, selectedMonth));
     const years = availableYears(records);
     const sheets = useMemo(() => exportSheets(selectedRecords, userType, selection), [selectedRecords, userType, selection]);
     const preview = sheets.find(sheet => sheet.name === previewName) || sheets[0];
@@ -47,27 +46,27 @@ export default function ExportView({ records, initialYear, onYearChange, selecte
                     <span className="block mt-1 text-sm text-stone-500">{option.detail}</span>
                 </button>)}
             </div>
-            <section className="bg-white rounded-3xl p-6 border border-stone-100 flex flex-wrap items-end justify-between gap-5">
+            <section className="bg-white rounded-2xl p-5 border border-stone-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[auto_auto_1fr_auto] items-end gap-4">
                 <div>
                     <label htmlFor="export-financial-year" className="block text-sm font-semibold text-stone-700 mb-2">Financial year · April–March</label>
-                    <select id="export-financial-year" value={year} onChange={e => {setYear(e.target.value);setMessage('');}} className="border border-stone-200 rounded-xl px-4 py-3 text-sm bg-white mb-4">
+                    <select id="export-financial-year" value={year} onChange={e => {setYear(e.target.value);setMessage('');}} className="border border-stone-200 rounded-xl px-4 py-3 text-sm bg-white w-full">
                         <option value="All">All financial years</option>
                         {years.map(y => <option key={y} value={y}>FY {financialYearLabel(y)}</option>)}
                         <option value="Unknown">Unassigned year</option>
                     </select>
-                    <label htmlFor="export-record-scope" className="block text-sm font-semibold text-stone-700 mb-2">Records to include</label>
-                    <select id="export-record-scope" value={scope} onChange={event => { setScope(event.target.value); setMessage(''); }} className="border border-stone-200 rounded-xl px-4 py-3 text-sm bg-white">
-                        <option value="filtered">Current month filter: {monthLabel}</option>
-                        <option value="all">Selected year · all months</option>
-                    </select>
-                    <p className="text-xs text-stone-500 mt-2">Year is based on customer registration; older records fall back to CRN, then record date. Includes all stages; deleted records are excluded.</p>
                 </div>
-                <div className="flex items-center gap-5">
-                    <p className="text-sm text-stone-600"><strong className="text-stone-900">{count}</strong> records · {sheets.length} {sheets.length === 1 ? 'sheet' : 'sheets'}</p>
+                <div>
+                    <label htmlFor="export-month" className="block text-sm font-semibold text-stone-700 mb-2">Month</label>
+                    <select id="export-month" value={selectedMonth} onChange={e => {onMonthChange(e.target.value);setMessage('');}} className="w-full border border-stone-200 rounded-xl px-4 py-3 text-sm bg-white">
+                        <option value="All">All months</option>
+                        {[['3','April'],['4','May'],['5','June'],['6','July'],['7','August'],['8','September'],['9','October'],['10','November'],['11','December'],['0','January'],['1','February'],['2','March']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                </div>
+
+                    <p className="text-sm text-stone-600 xl:text-right pb-3 whitespace-nowrap"><strong className="text-stone-900">{count}</strong> records · {sheets.length} {sheets.length === 1 ? 'sheet' : 'sheets'}</p>
                     <button onClick={download} disabled={disabled || exporting || !count} className="flex items-center gap-2 rounded-2xl bg-stone-900 text-white px-6 py-3 text-sm font-semibold disabled:opacity-40">
                         <Download size={18} />{exporting ? 'Preparing…' : 'Download Excel'}
                     </button>
-                </div>
             </section>
             <p className="text-sm text-stone-500">Both sheets use the same customer year. Financial amounts include the full payment history of those customers, including payments in other years.</p>
             {error && <p role="alert" className="rounded-2xl p-4 bg-red-50 text-red-700">{error}</p>}
