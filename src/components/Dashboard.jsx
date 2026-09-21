@@ -1,3 +1,4 @@
+import { financialYear, financialYearLabel, availableYears, matchesPeriod } from '../financialYear.js';
 import StageMoveNotice from './StageMoveNotice';
 import { stageTransitionPatch } from '../stageRemarks.js';
 // ─── Dashboard.jsx ────────────────────────────────────────────────────────────
@@ -54,6 +55,7 @@ export default function Dashboard({ user, onLogout }) {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [showAddLead, setShowAddLead]     = useState(false);
     const [selectedMonth, setSelectedMonth] = useState('All');
+    const [selectedYear, setSelectedYear] = useState(() => String(financialYear()));
     const globalSearchRef                   = useRef(null);
     const meta = useMetadata();
 
@@ -169,29 +171,8 @@ export default function Dashboard({ user, onLogout }) {
     const trashed     = customers.filter(c => !!c.deleted_at);
     const isAuthorized = () => access.crm || access.finance;
 
-    // Helper to get year from Customer: Checks crn for year ranges (e.g. 26-27 -> 2026, 27-28 -> 2027), falling back to date field or created_at
-    const getYearFromCustomer = (c) => {
-        const crn = String(c.crn || '');
-        if (crn.includes('26-27')) return 2026;
-        if (crn.includes('27-28')) return 2027;
-        if (crn.includes('25-26')) return 2025;
-        
-        const dateStr = c.date || c.created_at;
-        if (dateStr) {
-            const d = new Date(dateStr);
-            if (!isNaN(d.getTime())) return d.getFullYear();
-        }
-        return null;
-    };
-
-    // Apply Month filtering
-    const filteredActive = active.filter(c => {
-        if (selectedMonth === 'All') return true;
-        const dateStr = c.date || c.created_at;
-        if (!dateStr) return false;
-        const date = new Date(dateStr);
-        return !isNaN(date.getTime()) && date.getMonth() === Number(selectedMonth);
-    });
+    const years = availableYears(active);
+    const filteredActive = active.filter(c => matchesPeriod(c, selectedYear, selectedMonth));
 
     const stageCounts = PRIMARY_STAGES.reduce((acc, s) => {
         acc[s.id] = filteredActive.filter(c => c.stage === s.id && isAuthorized(c)).length;
@@ -358,7 +339,7 @@ export default function Dashboard({ user, onLogout }) {
             {/* ── Main ── */}
             <main className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
                 {/* Header */}
-                <header className="h-16 bg-white/90 backdrop-blur-md border-b border-stone-100 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30">
+                <header className="min-h-16 py-3 gap-3 flex-wrap bg-white/90 backdrop-blur-md border-b border-stone-100 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-stone-500"><Menu className="w-6 h-6" /></button>
                         <h2 className="font-semibold text-stone-800">{headerTitle}</h2>
@@ -369,7 +350,12 @@ export default function Dashboard({ user, onLogout }) {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <select aria-label="Financial year" value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="bg-stone-100 text-stone-700 text-sm px-3 py-2 rounded-xl focus:ring-2 focus:ring-amber-300">
+                            <option value="All">All financial years</option>
+                            {years.map(year => <option key={year} value={year}>FY {financialYearLabel(year)}</option>)}
+                            <option value="Unknown">Unassigned year</option>
+                        </select>
                         {/* Month Selector directly in main header */}
                         <select
                             aria-label="Filter by month"
@@ -456,7 +442,7 @@ export default function Dashboard({ user, onLogout }) {
                 <div className="flex-1 p-4 lg:p-6">
                     {dataError && <div role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{dataError}<button onClick={() => fetchData()} className="ml-3 underline">Retry</button></div>}
 
-                    {currentView === 'export' && <ExportView key={user.userType} records={active} filteredRecords={filteredActive} userType={user.userType} monthLabel={selectedMonth === 'All' ? 'All months' : MONTHS[Number(selectedMonth)]} disabled={loading || !!dataError} />}
+                    {currentView === 'export' && <ExportView key={user.userType} records={active} initialYear={selectedYear} onYearChange={setSelectedYear} selectedMonth={selectedMonth} userType={user.userType} monthLabel={selectedMonth === 'All' ? 'All months' : MONTHS[Number(selectedMonth)]} disabled={loading || !!dataError} />}
                     {currentView === 'dashboard' && <DashboardView customers={filteredActive} loading={loading} access={access} />}
                     {currentView === 'financial' && access.finance && <FinancialView meta={meta} customers={filteredActive} onSelectCustomer={setSelectedCustomer} projectType={financialProjectType} />}
                     {currentView === 'subsidy' && access.finance && <SubsidyView customers={filteredActive} onSelectCustomer={setSelectedCustomer} />}

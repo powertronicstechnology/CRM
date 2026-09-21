@@ -1,17 +1,21 @@
+import { financialYear, financialYearLabel, availableYears, matchesPeriod } from '../financialYear.js';
 import { useMemo, useState } from 'react';
 import { Download, FileSpreadsheet } from 'lucide-react';
 import { permissionsFor } from '../access';
 import { exportSheets, downloadExportWorkbook } from '../exportWorkbook.js';
 
-export default function ExportView({ records, filteredRecords, userType, monthLabel, disabled }) {
+export default function ExportView({ records, initialYear, onYearChange, selectedMonth = 'All', userType, monthLabel, disabled }) {
     const access = permissionsFor(userType);
     const [selection, setSelection] = useState(access.crm && access.finance ? 'all' : access.crm ? 'customers' : 'finance');
     const [scope, setScope] = useState('filtered');
+    const year = initialYear ?? String(financialYear());
+    const setYear = onYearChange;
     const [previewName, setPreviewName] = useState('');
     const [exporting, setExporting] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
-    const selectedRecords = scope === 'all' ? records : filteredRecords;
+    const selectedRecords = records.filter(record => matchesPeriod(record, year, scope === 'all' ? 'All' : selectedMonth));
+    const years = availableYears(records);
     const sheets = useMemo(() => exportSheets(selectedRecords, userType, selection), [selectedRecords, userType, selection]);
     const preview = sheets.find(sheet => sheet.name === previewName) || sheets[0];
     const count = preview?.rows.length || 0;
@@ -24,7 +28,7 @@ export default function ExportView({ records, filteredRecords, userType, monthLa
         if (exporting || disabled || !count) return;
         setExporting(true); setError(''); setMessage('');
         try {
-            await downloadExportWorkbook(selectedRecords, userType, selection);
+            await downloadExportWorkbook(selectedRecords, userType, selection, year);
             setMessage(`Download started: ${count} records in ${sheets.length} ${sheets.length === 1 ? 'sheet' : 'sheets'}.`);
         } catch (err) { setError(err.message || 'Export failed. Please try again.'); }
         finally { setExporting(false); }
@@ -45,12 +49,18 @@ export default function ExportView({ records, filteredRecords, userType, monthLa
             </div>
             <section className="bg-white rounded-3xl p-6 border border-stone-100 flex flex-wrap items-end justify-between gap-5">
                 <div>
+                    <label htmlFor="export-financial-year" className="block text-sm font-semibold text-stone-700 mb-2">Financial year · April–March</label>
+                    <select id="export-financial-year" value={year} onChange={e => {setYear(e.target.value);setMessage('');}} className="border border-stone-200 rounded-xl px-4 py-3 text-sm bg-white mb-4">
+                        <option value="All">All financial years</option>
+                        {years.map(y => <option key={y} value={y}>FY {financialYearLabel(y)}</option>)}
+                        <option value="Unknown">Unassigned year</option>
+                    </select>
                     <label htmlFor="export-record-scope" className="block text-sm font-semibold text-stone-700 mb-2">Records to include</label>
                     <select id="export-record-scope" value={scope} onChange={event => { setScope(event.target.value); setMessage(''); }} className="border border-stone-200 rounded-xl px-4 py-3 text-sm bg-white">
                         <option value="filtered">Current month filter: {monthLabel}</option>
-                        <option value="all">All records · all months</option>
+                        <option value="all">Selected year · all months</option>
                     </select>
-                    <p className="text-xs text-stone-500 mt-2">Includes all stages. Deleted records are excluded.</p>
+                    <p className="text-xs text-stone-500 mt-2">Year is based on customer registration; older records fall back to CRN, then record date. Includes all stages; deleted records are excluded.</p>
                 </div>
                 <div className="flex items-center gap-5">
                     <p className="text-sm text-stone-600"><strong className="text-stone-900">{count}</strong> records · {sheets.length} {sheets.length === 1 ? 'sheet' : 'sheets'}</p>
@@ -59,6 +69,7 @@ export default function ExportView({ records, filteredRecords, userType, monthLa
                     </button>
                 </div>
             </section>
+            <p className="text-sm text-stone-500">Both sheets use the same customer year. Financial amounts include the full payment history of those customers, including payments in other years.</p>
             {error && <p role="alert" className="rounded-2xl p-4 bg-red-50 text-red-700">{error}</p>}
             {message && <p role="status" className="rounded-2xl p-4 bg-emerald-50 text-emerald-700">{message}</p>}
             <section className="bg-white rounded-3xl border border-stone-100 overflow-hidden min-w-0">

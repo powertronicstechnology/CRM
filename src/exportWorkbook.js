@@ -1,3 +1,4 @@
+import { exportFilename } from './financialYear.js';
 import { quotationAmount, receivableAmount } from './quotation.js';
 import { permissionsFor } from './access.js';
 
@@ -92,14 +93,14 @@ export async function buildExportWorkbook(records, userType, selection = 'all') 
     return workbook;
 }
 
-export async function downloadExportWorkbook(records, userType, selection = 'all') {
+export async function downloadExportWorkbook(records, userType, selection = 'all', year = 'All') {
     const workbook = await buildExportWorkbook(records, userType, selection);
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `POWERTRONICS_${workbook.worksheets.map(sheet => sheet.name).join('_')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    anchor.download = exportFilename(selection, year);
     document.body.appendChild(anchor);
     try { anchor.click(); } finally {
         anchor.remove();
