@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 
-export default function StageChangeConfirm({ label, onConfirm, onCancel }) {
+export default function StageChangeConfirm({ label, customerName, crn, fromStage, onConfirm, onCancel }) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const locked = useRef(false), box = useRef(null);
@@ -28,7 +28,7 @@ export default function StageChangeConfirm({ label, onConfirm, onCancel }) {
     };
     return <div className="fixed inset-0 z-[90] bg-stone-950/50 flex items-center justify-center p-4" onClick={event => event.stopPropagation()}>
         <div ref={box} role="alertdialog" aria-modal="true" aria-labelledby={titleId}
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl text-left"
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl text-left"
             onKeyDown={event => {
                 if (event.key !== 'Tab') return;
                 const buttons = [...box.current.querySelectorAll('button:not(:disabled)')];
@@ -37,8 +37,10 @@ export default function StageChangeConfirm({ label, onConfirm, onCancel }) {
                 if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
                 if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
             }}>
-            <h2 id={titleId} className="text-lg font-semibold text-stone-900">Change stage to “{label}”?</h2>
-            <p className="mt-2 text-sm text-stone-600">Are you sure?</p>
+            <h2 id={titleId} className="text-lg font-semibold text-stone-900">Move customer?</h2>
+            <p className="mt-3 text-base font-semibold text-stone-800">{customerName || 'Customer'}</p>
+            <p className="mt-1 text-sm text-stone-500">CRN: {crn || 'Not assigned'}</p>
+            <p className="mt-4 text-sm leading-relaxed text-stone-600">Move from <strong className="text-stone-800">{fromStage || 'No stage'}</strong> to <strong className="text-stone-800">{label}</strong>?</p>
             {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
             <div className="mt-5 grid grid-cols-2 gap-3">
                 <button type="button" disabled={saving} onClick={onCancel} className="rounded-xl border border-stone-200 px-4 py-2.5 text-sm disabled:opacity-50">Cancel</button>

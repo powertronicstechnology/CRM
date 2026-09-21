@@ -1443,7 +1443,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
 
             {guard.dialog && <UnsavedChanges {...guard.dialog} allowLeave={false} saveLabel="Save and exit" />}
 
-            {confirmNextStage && <StageChangeConfirm label={confirmNextStage.label} onCancel={() => setConfirmNextStage(null)} onConfirm={() => handleStageChange(confirmNextStage.id)} />}
+            {confirmNextStage && <StageChangeConfirm customerName={customer.customer_name} crn={customer.crn} fromStage={PRIMARY_STAGES.find(s => s.id === customer.stage)?.label || customer.stage} label={confirmNextStage.label} onCancel={() => setConfirmNextStage(null)} onConfirm={() => handleStageChange(confirmNextStage.id)} />}
             {/* Soft-delete confirm */}
             {showDeleteConfirm && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">

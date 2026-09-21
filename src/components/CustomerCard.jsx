@@ -73,7 +73,7 @@ export default function CustomerCard({ customer, onSelect, onMoveStage, canSeeFi
                 </div>
                 {error && <p role="alert" className="text-xs text-red-700 mt-1">{error}</p>}
             </div>
-            {pendingStage && <StageChangeConfirm label={pendingStage.label} onCancel={() => setPendingStage(null)} onConfirm={() => saveStage(pendingStage.id)} />}
+            {pendingStage && <StageChangeConfirm customerName={customer.customer_name} crn={customer.crn} fromStage={PRIMARY_STAGES.find(s => s.id === customer.stage)?.label || customer.stage} label={pendingStage.label} onCancel={() => setPendingStage(null)} onConfirm={() => saveStage(pendingStage.id)} />}
         </article>
     );
 }

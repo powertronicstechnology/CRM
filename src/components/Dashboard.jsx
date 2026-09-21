@@ -128,7 +128,7 @@ export default function Dashboard({ user, onLogout }) {
             setCustomers(prev => prev.map(c => c.id === id ? saved : c));
             setSelectedCustomer(prev => prev?.id === id ? saved : prev);
             if (patch.stage && saved.stage === patch.stage && saved.stage !== original?.stage) {
-                setStageNotice({ crn: saved.crn || original?.crn, name: saved.customer_name || original?.customer_name || 'Customer', stage: PRIMARY_STAGES.find(s => s.id === saved.stage)?.label || saved.stage });
+                setStageNotice({ fromStage: PRIMARY_STAGES.find(s => s.id === original?.stage)?.label || original?.stage || 'No stage', crn: saved.crn || original?.crn, name: saved.customer_name || original?.customer_name || 'Customer', stage: PRIMARY_STAGES.find(s => s.id === saved.stage)?.label || saved.stage });
             }
         } catch (error) {
             setDataError(error.message);
