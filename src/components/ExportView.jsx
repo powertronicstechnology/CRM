@@ -1,4 +1,4 @@
-import { financialYear, financialYearLabel, availableYears, matchesPeriod } from '../financialYear.js';
+import { DEFAULT_FINANCIAL_YEAR, financialYearLabel, availableYears, matchesPeriod } from '../financialYear.js';
 import { useMemo, useState } from 'react';
 import { Download, FileSpreadsheet } from 'lucide-react';
 import { permissionsFor } from '../access';
@@ -7,7 +7,7 @@ import { exportSheets, downloadExportWorkbook } from '../exportWorkbook.js';
 export default function ExportView({ records, initialYear, onYearChange, selectedMonth = 'All', onMonthChange, userType, disabled }) {
     const access = permissionsFor(userType);
     const [selection, setSelection] = useState(access.crm && access.finance ? 'all' : access.crm ? 'customers' : 'finance');
-    const year = initialYear ?? String(financialYear());
+    const year = initialYear ?? String(DEFAULT_FINANCIAL_YEAR);
     const setYear = onYearChange;
     const [previewName, setPreviewName] = useState('');
     const [exporting, setExporting] = useState(false);
@@ -68,7 +68,7 @@ export default function ExportView({ records, initialYear, onYearChange, selecte
                         <Download size={18} />{exporting ? 'Preparing…' : 'Download Excel'}
                     </button>
             </section>
-            <p className="text-sm text-stone-500">Both sheets use the same customer year. Financial amounts include the full payment history of those customers, including payments in other years.</p>
+            <p className="text-sm text-stone-500">Both sheets use the financial year in the CRN (for example, PT 26-27 = FY 2026–27). Financial amounts include the full payment history of those customers, including payments in other years.</p>
             {error && <p role="alert" className="rounded-2xl p-4 bg-red-50 text-red-700">{error}</p>}
             {message && <p role="status" className="rounded-2xl p-4 bg-emerald-50 text-emerald-700">{message}</p>}
             <section className="bg-white rounded-3xl border border-stone-100 overflow-hidden min-w-0">

@@ -1,4 +1,4 @@
-import { financialYear, financialYearLabel, availableYears, matchesPeriod } from '../financialYear.js';
+import { DEFAULT_FINANCIAL_YEAR, financialYearLabel, availableYears, matchesPeriod } from '../financialYear.js';
 import StageMoveNotice from './StageMoveNotice';
 import { stageTransitionPatch } from '../stageRemarks.js';
 // ─── Dashboard.jsx ────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ export default function Dashboard({ user, onLogout }) {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [showAddLead, setShowAddLead]     = useState(false);
     const [selectedMonth, setSelectedMonth] = useState('All');
-    const [selectedYear, setSelectedYear] = useState(() => String(financialYear()));
+    const [selectedYear, setSelectedYear] = useState(() => String(DEFAULT_FINANCIAL_YEAR));
     const globalSearchRef                   = useRef(null);
     const meta = useMetadata();
 

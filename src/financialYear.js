@@ -1,4 +1,5 @@
 // Indian financial years run from April 1 through March 31.
+export const DEFAULT_FINANCIAL_YEAR = 2026;
 export function indiaDate(value = new Date()) {
     const date = new Date(value);
     if (!Number.isFinite(date.getTime())) return null;
@@ -11,15 +12,14 @@ export function financialYear(value = new Date()) {
 }
 export const financialYearLabel = year => `${year}–${String(Number(year) + 1).slice(-2)}`;
 export function customerYear(record) {
-    if (record.date_of_registration && financialYear(record.date_of_registration) !== null) return financialYear(record.date_of_registration);
-    const match = String(record.crn || '').match(/\b(\d{2}|\d{4})\s*[-–]\s*(\d{2}|\d{4})\s*[=/]/);
+    const match = String(record.crn || '').match(/^\s*PT\s*(\d{4}|\d{2})\s*[-–]\s*(\d{4}|\d{2})(?=\s*(?:[=/]|$))/i);
     if (match) {
         const start = Number(match[1]) + (match[1].length === 2 ? 2000 : 0);
         if ((start + 1) % 100 === Number(match[2]) % 100) return start;
     }
-    return financialYear(record.date || record.created_at || 'invalid');
+    return null;
 }
-export const availableYears = records => [...new Set([financialYear(), ...records.map(customerYear).filter(y => y !== null)])].sort((a,b) => b-a);
+export const availableYears = records => [...new Set([DEFAULT_FINANCIAL_YEAR, ...records.map(customerYear).filter(y => y !== null)])].sort((a,b) => b-a);
 export function matchesPeriod(record, year = 'All', month = 'All') {
     if (year === 'Unknown' ? customerYear(record) !== null : year !== 'All' && customerYear(record) !== Number(year)) return false;
     if (month === 'All') return true;
