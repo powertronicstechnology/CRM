@@ -5,8 +5,8 @@ import QuotationValue from './QuotationValue.jsx';
 // ──────────────────────────────────────────────────────────────────────────────
 
 import { useState } from 'react';
-import { Banknote, Tag, Calendar, User, Zap, CheckCircle2, Clock, AlertCircle, ArrowUpRight } from 'lucide-react';
-import { formatIndianCurrency, formatDate } from '../utils';
+import { Tag, ArrowUpRight } from 'lucide-react';
+import { formatDate } from '../utils';
 
 const SUBSIDY_TAGS = [
     { id: 'Applied',  label: 'Applied',  bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    dot: 'bg-blue-500' },
@@ -35,12 +35,6 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
         return status || c.subsidy_claim || c.subsidy_received;
     });
 
-    // Counts & stats
-    const appliedCount  = subsidyCustomers.filter(c => getCustomerSubsidyStatus(c) === 'Applied').length;
-    const claimedCount  = subsidyCustomers.filter(c => getCustomerSubsidyStatus(c) === 'Claimed' || (c.subsidy_claim && !c.subsidy_received)).length;
-    const returnedCount = subsidyCustomers.filter(c => getCustomerSubsidyStatus(c) === 'Returned').length;
-    const receivedCount = subsidyCustomers.filter(c => getCustomerSubsidyStatus(c) === 'Received' || !!c.subsidy_received).length;
-
     const totalCapacityKwp = subsidyCustomers.reduce((acc, c) => acc + (Number(c.system_capacity_kwp) || 0), 0);
 
     // Grouping by status
@@ -60,57 +54,20 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
 
     return (
         <div className="space-y-5 animate-in fade-in duration-500">
-            {/* Top Stat Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
-                    <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-stone-500 tracking-normal">Total In Subsidy Flow</p>
-                        <Banknote size={16} className="text-amber-500" />
-                    </div>
-                    <p className="text-2xl font-semibold text-stone-800">{subsidyCustomers.length}</p>
-                    <p className="text-xs text-stone-400 mt-0.5">{totalCapacityKwp.toFixed(2)} kWp combined capacity</p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
-                    <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Claimed / Pending</p>
-                        <Clock size={16} className="text-amber-500" />
-                    </div>
-                    <p className="text-2xl font-semibold text-amber-700">{claimedCount}</p>
-                    <p className="text-xs text-amber-600/80 mt-0.5">Awaiting disbursement</p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
-                    <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Subsidy Received</p>
-                        <CheckCircle2 size={16} className="text-emerald-700" />
-                    </div>
-                    <p className="text-2xl font-semibold text-emerald-700">{receivedCount}</p>
-                    <p className="text-xs text-emerald-700/80 mt-0.5">Fully disbursed & settled</p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
-                    <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-semibold text-rose-600 uppercase tracking-wide">Returned / Queries</p>
-                        <AlertCircle size={16} className="text-rose-500" />
-                    </div>
-                    <p className="text-2xl font-semibold text-rose-700">{returnedCount}</p>
-                    <p className="text-xs text-rose-600/80 mt-0.5">Needs correction / resubmission</p>
-                </div>
-            </div>
-
-            {/* Tag Filter Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+            {/* Combined summary and status filters */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <button
+                    aria-pressed={activeFilter === null}
                     onClick={() => setActiveFilter(null)}
-                    className={`rounded-xl p-3 border text-left transition-all ${
+                    className={`rounded-2xl p-4 border text-left transition-all ${
                         activeFilter === null
                             ? 'bg-stone-900 border-stone-900 text-white shadow-md'
                             : 'bg-white border-stone-100 text-stone-800 hover:border-stone-200'
                     }`}
                 >
                     <p className="text-xs font-semibold uppercase tracking-wide mb-0.5 opacity-70">All Subsidy</p>
-                    <p className="text-xl font-semibold">{subsidyCustomers.length}</p>
+                    <p className="text-2xl font-semibold">{subsidyCustomers.length}</p>
+                    <p className="text-xs mt-1 opacity-70">{totalCapacityKwp.toFixed(2)} kWp combined</p>
                 </button>
 
                 {SUBSIDY_TAGS.map(tag => {
@@ -119,13 +76,15 @@ export default function SubsidyView({ customers = [], onSelectCustomer }) {
                     return (
                         <button
                             key={tag.id}
+                            aria-pressed={isSelected}
                             onClick={() => setActiveFilter(isSelected ? null : tag.id)}
-                            className={`rounded-xl p-3 border text-left transition-all ${
+                            className={`rounded-2xl p-4 border text-left transition-all ${
                                 isSelected ? 'ring-2 ring-stone-900 ring-offset-2' : ''
                             } ${tag.bg} ${tag.border}`}
                         >
                             <p className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${tag.text}`}>{tag.label}</p>
-                            <p className={`text-xl font-semibold ${tag.text}`}>{count}</p>
+                            <p className={`text-2xl font-semibold ${tag.text}`}>{count}</p>
+                            <p className={`text-xs mt-1 ${tag.text}`}>{({Applied: 'Application submitted', Claimed: 'Awaiting disbursement', Returned: 'Needs correction', Received: 'Disbursement received'})[tag.id]}</p>
                         </button>
                     );
                 })}
