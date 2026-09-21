@@ -25,7 +25,7 @@ test('navigation and customer detail tabs match each role', async () => {
             assert.equal(nav.includes('Trash'),access.admin);
             assert.equal(nav.includes('Project Stages'),access.crm);
             assert.equal(nav.includes('Add Lead'),access.crm);
-            assert.equal(nav.includes('PM SURYA'),access.finance);
+            assert.equal(nav.includes('PM Surya Ghar'),access.finance);
             const customer = { id:'one', customer_name:'Test', stage:'REGISTRATION DONE', project_checklist:[] };
             const detail = renderToStaticMarkup(createElement(Detail,{customer,user,onClose:()=>{},onUpdate:()=>{},onDelete:()=>{}}));
             assert.equal(detail.includes('Finance &amp; Bank'),access.finance);

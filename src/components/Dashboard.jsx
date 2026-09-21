@@ -244,7 +244,7 @@ export default function Dashboard({ user, onLogout }) {
     const headerTitle =
         currentView === 'export' ? 'Export Records'
         : currentView === 'dashboard' ? 'Business Dashboard'
-        : currentView === 'financial' ? `Financial Tags (${financialProjectType === 'General' ? 'General' : 'PM SURYA'})`
+        : currentView === 'financial' ? `Financial Tags (${financialProjectType === 'General' ? 'General' : 'PM Surya Ghar'})`
         : currentView === 'subsidy'   ? 'Subsidy Overview'
         : currentView === 'operations' ? 'Operations'
         : currentView === 'activity'  ? 'Activity Log'
@@ -293,12 +293,12 @@ export default function Dashboard({ user, onLogout }) {
                         </button>
 
                         {/* PM Surya Tab */}
-                        <button onClick={() => { setCurrentView('financial'); setFinancialProjectType('PM SURYA'); setSidebarOpen(false); }}
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold mb-1 transition-colors ${currentView === 'financial' && financialProjectType === 'PM SURYA' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'}`}>
+                        <button onClick={() => { setCurrentView('financial'); setFinancialProjectType('PM Surya Ghar'); setSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold mb-1 transition-colors ${currentView === 'financial' && financialProjectType === 'PM Surya Ghar' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'}`}>
                             <IndianRupee className="w-4 h-4 flex-shrink-0" />
-                            <span className="flex-1 text-left">PM SURYA</span>
+                            <span className="flex-1 text-left">PM Surya Ghar</span>
                             {pmSuryaFinCount > 0 && (
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-semibold ${currentView === 'financial' && financialProjectType === 'PM SURYA' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'}`}>
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-semibold ${currentView === 'financial' && financialProjectType === 'PM Surya Ghar' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-600'}`}>
                                     {pmSuryaFinCount}
                                 </span>
                             )}

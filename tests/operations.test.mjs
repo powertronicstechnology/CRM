@@ -43,5 +43,12 @@ test('Operations options persist, removed defaults stay removed and only Admin w
  await db.query("UPDATE admin SET quoted_amount_3=10,payment_1=10 WHERE customer_name='Example'");
  customer=(await db.query("SELECT * FROM admin WHERE customer_name='Example'")).rows[0];assert.equal(customer.financial_tag,'Settled');
  await db.query("DELETE FROM metadata WHERE category='meter_phase'");assert.deepEqual(groupDropdowns((await db.query('SELECT * FROM metadata')).rows).meter_phase,[]);
+
+ await db.query("INSERT INTO metadata(category,label) VALUES('project_type','PM Surya Ghar') ON CONFLICT DO NOTHING");
+ await db.query("INSERT INTO admin(customer_name,project_type,financial_tag) VALUES('Merge example','PM SURYA','Deposit')");
+ await db.exec(await read('../supabase/migrations/20260921092815_merge_pm_surya_ghar.sql'));
+ assert.equal((await db.query("SELECT project_type FROM admin WHERE customer_name='Merge example'")).rows[0].project_type,'PM Surya Ghar');
+ assert.equal((await db.query("SELECT label FROM metadata WHERE category='project_type' AND lower(label) LIKE '%surya%'")).rows.length,1);
+ await db.exec(await read('../supabase/migrations/20260921092815_merge_pm_surya_ghar.sql'));
  }finally{await db.close();}
 });
