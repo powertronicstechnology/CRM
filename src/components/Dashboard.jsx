@@ -75,7 +75,8 @@ export default function Dashboard({ user, onLogout }) {
         const refresh = () => { if (!document.hidden) fetchData(true); };
         const timer = setInterval(refresh, 30000);
         window.addEventListener('focus', refresh);
-        return () => { clearInterval(timer); window.removeEventListener('focus', refresh); };
+        window.addEventListener('customer-records-updated', refresh);
+        return () => { clearInterval(timer); window.removeEventListener('focus', refresh); window.removeEventListener('customer-records-updated', refresh); };
     }, [user.userType]);
 
     // Close global search dropdown when clicking outside

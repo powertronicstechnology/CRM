@@ -24,6 +24,24 @@ test('Operations options persist, removed defaults stay removed and only Admin w
  assert.deepEqual(withCurrentOption(meta.panel,'ADANI')[0],'ADANI');
  await db.exec('RESET ROLE');await db.exec(await read('../supabase/migrations/20260921090256_operations_dropdowns.sql'));
  meta=groupDropdowns((await db.query('SELECT * FROM metadata')).rows);assert.ok(!meta.panel.includes('ADANI'));
+
+ await db.exec(await read('../supabase/migrations/20260920180136_unify_financial_quotation.sql'));
+ await db.exec(await read('../supabase/migrations/20260921092205_rename_dropdown_options.sql'));
+ await db.query("INSERT INTO admin(customer_name,panel,project_type,financial_tag,payment_remark_1,payments,deleted_at) VALUES('Example','New Panel','General','Initial','ONL','[{\"remark\":\"ONL\",\"amount\":10}]',now())");
+ await db.exec('SET ROLE authenticated');
+ const rename=async(c,o,n)=>(await db.query('SELECT public.rename_dropdown_option($1,$2,$3) AS result',[c,o,n])).rows[0].result;
+ assert.equal((await rename('panel','New Panel','Renamed panel')).updated,1);
+ await assert.rejects(rename('panel','Renamed panel','WAAREE'),/already exists/);
+ assert.equal((await rename('payment_method','ONL','Online transfer')).updated,1);
+ assert.equal((await rename('financial_tag_general','Initial','Deposit')).updated,1);
+ await rename('financial_tag_general','Final payment','Settled');
+ await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[staff]);
+ await assert.rejects(rename('inverter','SOLARYAAN','Not allowed'),/Admin required/);
+ await db.exec('RESET ROLE');
+ let customer=(await db.query("SELECT * FROM admin WHERE customer_name='Example'")).rows[0];
+ assert.equal(customer.panel,'Renamed panel');assert.equal(customer.financial_tag,'Deposit');assert.equal(customer.payment_remark_1,'Online transfer');assert.equal(customer.payments[0].remark,'Online transfer');
+ await db.query("UPDATE admin SET quoted_amount_3=10,payment_1=10 WHERE customer_name='Example'");
+ customer=(await db.query("SELECT * FROM admin WHERE customer_name='Example'")).rows[0];assert.equal(customer.financial_tag,'Settled');
  await db.query("DELETE FROM metadata WHERE category='meter_phase'");assert.deepEqual(groupDropdowns((await db.query('SELECT * FROM metadata')).rows).meter_phase,[]);
  }finally{await db.close();}
 });
