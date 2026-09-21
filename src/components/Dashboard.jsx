@@ -1,3 +1,4 @@
+import StageMoveNotice from './StageMoveNotice';
 import { stageTransitionPatch } from '../stageRemarks.js';
 // ─── Dashboard.jsx ────────────────────────────────────────────────────────────
 // Main admin layout: sidebar + header + view router.
@@ -27,7 +28,7 @@ import UserManagementView  from './UserManagementView';
 import TrashView           from './TrashView';
 
 import {
-    LayoutDashboard, IndianRupee, Activity, UserCog, Menu, X, Settings2, CheckCircle2,
+    LayoutDashboard, IndianRupee, Activity, UserCog, Menu, X, Settings2,
     Search, Plus, Download, LogOut, Sun, Trash2, Users, Banknote,
 } from 'lucide-react';
 
@@ -127,7 +128,7 @@ export default function Dashboard({ user, onLogout }) {
             setCustomers(prev => prev.map(c => c.id === id ? saved : c));
             setSelectedCustomer(prev => prev?.id === id ? saved : prev);
             if (patch.stage && saved.stage === patch.stage && saved.stage !== original?.stage) {
-                setStageNotice({ name: saved.customer_name || original?.customer_name || 'Customer', stage: PRIMARY_STAGES.find(s => s.id === saved.stage)?.label || saved.stage });
+                setStageNotice({ crn: saved.crn || original?.crn, name: saved.customer_name || original?.customer_name || 'Customer', stage: PRIMARY_STAGES.find(s => s.id === saved.stage)?.label || saved.stage });
             }
         } catch (error) {
             setDataError(error.message);
@@ -253,14 +254,7 @@ export default function Dashboard({ user, onLogout }) {
 
     return (
         <div className="min-h-screen bg-[#FCFBFA] flex">
-            {stageNotice && <div className="fixed bottom-6 right-6 z-[100] max-w-md flex items-start gap-3 rounded-2xl border border-emerald-200 bg-white p-5 shadow-xl">
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" aria-hidden="true" />
-                <div role="status" aria-live="polite" className="text-sm text-stone-700">
-                    <p className="font-semibold text-emerald-700 mb-1">Customer moved successfully</p>
-                    <p>{stageNotice.name} moved to <strong>{stageNotice.stage}</strong>.</p>
-                </div>
-                <button type="button" onClick={() => setStageNotice(null)} className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100">Got it</button>
-            </div>}
+            {stageNotice && <StageMoveNotice notice={stageNotice} onClose={() => setStageNotice(null)} />}
             {sidebarOpen && <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
             {/* ── Sidebar ── */}
