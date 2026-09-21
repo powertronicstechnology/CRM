@@ -815,7 +815,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
         if (stageSavingRef.current || newStage === editData.stage) return;
         stageSavingRef.current = true; setSavingStage(true); setSaveError('');
         const oldStage = editData.stage;
-        const patch = stageTransitionPatch(baseline.current, newStage, PRIMARY_STAGES.find(s => s.id === newStage)?.label || newStage);
+        const patch = stageTransitionPatch(baseline.current, newStage, PRIMARY_STAGES.find(s => s.id === baseline.current.stage)?.label || baseline.current.stage);
         try {
             await onUpdate(customer.id, patch);
             setEditData(prev => ({ ...prev, ...patch }));
@@ -1041,7 +1041,7 @@ export default function CustomerDetailModal({ customer, onClose, onUpdate: updat
                                             {savedCommentText && !commentDirty ? <CheckCircle2 size={16} /> : <Save size={16} />}
                                         </button>
                                     </div>
-                                    <p className="text-xs text-stone-500 mt-2">{savedCommentText && !commentDirty ? 'Saved. Moves to Internal Remarks with the next stage change.' : 'Save the note first; changing stage files it under the new stage.'}</p>
+                                    <p className="text-xs text-stone-500 mt-2">{savedCommentText && !commentDirty ? 'Saved to the database. Moves to Internal Remarks under the current stage when you change stage.' : 'Save the note first; changing stage files it under the stage you are leaving.'}</p>
                                 </div>
                             </div>
 

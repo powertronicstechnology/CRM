@@ -117,7 +117,7 @@ export default function Dashboard({ user, onLogout }) {
     const handleUpdateCustomer = async (id, updates) => {
         try {
             const original = customers.find(c => c.id === id);
-            const transition = updates.stage && updates.stage !== original?.stage ? stageTransitionPatch(original, updates.stage, PRIMARY_STAGES.find(s => s.id === updates.stage)?.label || updates.stage) : {};
+            const transition = updates.stage && updates.stage !== original?.stage ? stageTransitionPatch(original, updates.stage, PRIMARY_STAGES.find(s => s.id === original.stage)?.label || original.stage) : {};
             const patch = editablePatch(user.userType, { ...transition, ...updates }, original);
             if (!Object.keys(patch).length) return;
             const saved = await recordRequest('update', id, patch);

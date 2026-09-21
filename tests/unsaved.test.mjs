@@ -70,8 +70,8 @@ test('unsaved changes preserve forms and only leave after successful saves', asy
             assert.equal(record.stage,customer.stage);assert.equal(record.stages_remarks[0].pending,true);
             assert.equal(view.root.findByProps({placeholder:'Note for this customer...'}).props.value,'Ready for installation');
             failStage=false;await change(stageSelect(),'DOCUMENTS PENDING');
-            assert.equal(record.stage,'DOCUMENTS PENDING');assert.match(record.internal_remarks,/Documents Pending: Ready for installation/);
-            assert.equal(record.stages_remarks[0].stage,'DOCUMENTS PENDING');assert.equal(record.stages_remarks[0].pending,false);
+            assert.equal(record.stage,'DOCUMENTS PENDING');assert.match(record.internal_remarks,/Registration Done: Ready for installation/);
+            assert.equal(record.stages_remarks[0].stage,'REGISTRATION DONE');assert.equal(record.stages_remarks[0].next_stage,'DOCUMENTS PENDING');assert.equal(record.stages_remarks[0].pending,false);
             assert.equal(view.root.findByProps({placeholder:'Note for this customer...'}).props.value,'');
             const remark=record.internal_remarks;
             await change(stageSelect(),'PORTAL STEPS PENDING');assert.equal(record.internal_remarks,remark);
